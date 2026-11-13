@@ -1,0 +1,17 @@
+services:
+  job-search:
+    build: .
+    image: job-search
+    container_name: job-search
+    init: true
+    restart: unless-stopped
+    ports:
+      # Use "127.0.0.1:6972:6972" to restrict it to this machine.
+      - "6972:6972"
+    # Login, RapidAPI and Anthropic keys. The values below win over it.
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      # SQLite database: resumes, cached jobs, matches, saved jobs.
+      - "./data:/data"
