@@ -5,6 +5,7 @@ const profile = {
   name: "Jane Doe", summary: "Engineer.", targetTitles: ["Senior Engineer"], skills: ["TypeScript", "React"],
   yearsExperience: 8, seniority: "senior" as const, locations: ["Anaheim, CA"], industries: [],
   experience: [{ title: "Engineer", company: "Acme", location: "Remote", startDate: "2020", endDate: "Present", highlights: ["Built search"] }],
+  projects: [{ name: "job-search", url: "https://github.com/me/job-search", tech: ["Next.js"], startDate: "2026", endDate: "Present", highlights: ["Built AI resume matching"] }],
 };
 
 describe("resume pdf", () => {

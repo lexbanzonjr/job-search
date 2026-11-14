@@ -1,5 +1,5 @@
 import { one, dbOr, type Db } from "@/lib/db";
-import type { ResumeProfile } from "@/lib/ai/profile";
+import { normalizeProfile, type ResumeProfile } from "@/lib/ai/profile";
 
 export interface Resume {
   id: number;
@@ -21,7 +21,7 @@ const toResume = (r: Row): Resume => ({
   id: Number(r.id),
   filename: r.filename,
   text: r.text,
-  profile: r.profile_json ? JSON.parse(r.profile_json) : null,
+  profile: r.profile_json ? normalizeProfile(JSON.parse(r.profile_json)) : null,
   createdAt: r.created_at,
 });
 

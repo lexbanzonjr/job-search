@@ -46,7 +46,31 @@ export function ResumeDocument({ profile }: { profile: ResumeProfile }) {
                   <Text style={s.muted}>{[e.startDate, e.endDate].filter(Boolean).join(" – ")}</Text>
                 </View>
                 {e.location ? <Text style={s.muted}>{e.location}</Text> : null}
-                {e.highlights.map((h, j) => (
+                {e.highlights.filter((h) => h.trim()).map((h, j) => (
+                  <View key={j} style={s.bullet}>
+                    <Text style={s.dot}>•</Text>
+                    <Text style={s.bulletText}>{h}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </>
+        ) : null}
+
+        {profile.projects.length > 0 ? (
+          <>
+            <Text style={s.h2}>Projects</Text>
+            {profile.projects.map((p, i) => (
+              <View key={i} style={s.role} wrap={p.highlights.length > 6}>
+                <View style={s.roleHead}>
+                  <Text>
+                    <Text style={s.bold}>{p.name}</Text>
+                    {p.url ? <Text style={s.muted}>{`  ${p.url.replace(/^https?:\/\//, "")}`}</Text> : null}
+                  </Text>
+                  <Text style={s.muted}>{[p.startDate, p.endDate].filter(Boolean).join(" – ")}</Text>
+                </View>
+                {p.tech.filter(Boolean).length > 0 ? <Text style={s.muted}>{p.tech.filter(Boolean).join(" · ")}</Text> : null}
+                {p.highlights.filter((h) => h.trim()).map((h, j) => (
                   <View key={j} style={s.bullet}>
                     <Text style={s.dot}>•</Text>
                     <Text style={s.bulletText}>{h}</Text>

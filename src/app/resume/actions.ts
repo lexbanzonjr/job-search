@@ -55,6 +55,7 @@ export async function saveProfileAction(_prev: ActionState, formData: FormData):
     locations: list(formData.get("locations")),
     industries: list(formData.get("industries")),
     experience: parseJson(formData.get("experience")),
+    projects: parseJson(formData.get("projects")),
   });
   if (!parsed.success) return { error: "Invalid profile: " + parsed.error.issues.map((i) => i.path.join(".")).join(", ") };
   await updateProfile(user.id, resume.id, parsed.data);
