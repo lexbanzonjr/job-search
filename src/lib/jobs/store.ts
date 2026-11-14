@@ -76,27 +76,34 @@ export function cacheKey(p: SearchParams): string {
     r: !!p.remoteOnly,
     d: p.datePosted ?? "all",
     e: p.employmentType ?? "",
-    p: p.page ?? 1,
+    c: p.cursor ?? "",
     li: !!p.linkedinOnly,
   });
 }
 
+export interface SearchResult {
+  jobs: StoredJob[];
+  nextCursor: string | null;
+}
+
 /** Search JSearch, caching each parameter set for an hour to save API quota. */
-export async function searchJobs(p: SearchParams, db: DatabaseSync = getDb()): Promise<StoredJob[]> {
+export async function searchJobs(p: SearchParams, db: DatabaseSync = getDb()): Promise<SearchResult> {
   const key = cacheKey(p);
   const cached = db
-    .prepare("SELECT job_ids_json, created_at FROM searches WHERE cache_key = ?")
-    .get(key) as { job_ids_json: string; created_at: string } | undefined;
+    .prepare("SELECT job_ids_json, next_cursor, created_at FROM searches WHERE cache_key = ?")
+    .get(key) as { job_ids_json: string; next_cursor: string | null; created_at: string } | undefined;
   if (cached && Date.now() - Date.parse(cached.created_at + "Z") < CACHE_TTL_MS) {
-    return getJobsByIds(JSON.parse(cached.job_ids_json), db);
+    return { jobs: getJobsByIds(JSON.parse(cached.job_ids_json), db), nextCursor: cached.next_cursor };
   }
 
-  const ids = upsertJobs(await fetchJSearch(p), db);
+  const page = await fetchJSearch(p);
+  const ids = upsertJobs(page.jobs, db);
   db.prepare(
-    `INSERT INTO searches (cache_key, params_json, job_ids_json) VALUES (?, ?, ?)
-     ON CONFLICT(cache_key) DO UPDATE SET job_ids_json=excluded.job_ids_json, created_at=datetime('now')`,
-  ).run(key, JSON.stringify(p), JSON.stringify(ids));
-  return getJobsByIds(ids, db);
+    `INSERT INTO searches (cache_key, params_json, job_ids_json, next_cursor) VALUES (?, ?, ?, ?)
+     ON CONFLICT(cache_key) DO UPDATE SET job_ids_json=excluded.job_ids_json, next_cursor=excluded.next_cursor,
+       created_at=datetime('now')`,
+  ).run(key, JSON.stringify(p), JSON.stringify(ids), page.nextCursor);
+  return { jobs: getJobsByIds(ids, db), nextCursor: page.nextCursor };
 }
 
 // ---------- saved jobs ----------

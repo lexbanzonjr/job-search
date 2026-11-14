@@ -49,6 +49,8 @@ const MIGRATIONS: string[] = [
      notes TEXT NOT NULL DEFAULT '',
      saved_at TEXT NOT NULL DEFAULT (datetime('now'))
    );`,
+  // JSearch v2 pages with an opaque cursor.
+  `ALTER TABLE searches ADD COLUMN next_cursor TEXT;`,
 ];
 
 export function openDb(dir: string): DatabaseSync {
