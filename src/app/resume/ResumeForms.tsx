@@ -9,15 +9,32 @@ function Status({ state }: { state: ActionState }) {
   return <p className={`text-sm ${state.error ? "text-red-600" : "text-green-700"}`}>{state.error ?? state.ok}</p>;
 }
 
-export function UploadForm() {
+export function UploadForm({ hasResume }: { hasResume: boolean }) {
   const [state, action, pending] = useActionState(uploadResumeAction, null);
+  const [reState, reAction, rePending] = useActionState(reanalyzeAction, null);
   return (
-    <form action={action} className="card space-y-3">
+    <div className="card space-y-3">
       <h2 className="font-semibold">Upload resume</h2>
-      <input type="file" name="resume" accept=".pdf,.docx,.txt,.md" required className="block text-sm" />
-      <button disabled={pending} className="btn">{pending ? "Reading resume…" : "Upload & analyze"}</button>
+      <form id="upload-form" action={action}>
+        <input
+          type="file"
+          name="resume"
+          accept=".pdf,.docx,.txt,.md"
+          required
+          className="block text-sm text-zinc-600 file:mr-3 file:cursor-pointer file:rounded-md file:border file:border-zinc-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-zinc-700 hover:file:bg-zinc-50"
+        />
+      </form>
+      <div className="flex flex-wrap gap-2">
+        <button form="upload-form" disabled={pending} className="btn">{pending ? "Reading resume…" : "Upload & analyze"}</button>
+        {hasResume && (
+          <form action={reAction}>
+            <button disabled={rePending} className="btn-secondary h-full">{rePending ? "Analyzing…" : "Re-analyze"}</button>
+          </form>
+        )}
+      </div>
       <Status state={state} />
-    </form>
+      <Status state={reState} />
+    </div>
   );
 }
 
@@ -25,7 +42,6 @@ const SENIORITY = ["intern", "junior", "mid", "senior", "lead", "principal", "ex
 
 export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
   const [state, action, pending] = useActionState(saveProfileAction, null);
-  const [reState, reAction, rePending] = useActionState(reanalyzeAction, null);
   const p = profile;
   const field = (label: string, name: string, value: string, hint?: string) => (
     <label className="block space-y-1 text-sm">
@@ -37,14 +53,8 @@ export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
 
   return (
     <div className="card space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold">AI profile</h2>
-        <form action={reAction}>
-          <button disabled={rePending} className="btn-secondary">{rePending ? "Analyzing…" : "Re-analyze"}</button>
-        </form>
-      </div>
-      <Status state={reState} />
-      {!p && <p className="text-sm text-zinc-500">No profile yet. Click Re-analyze.</p>}
+      <h2 className="font-semibold">AI profile</h2>
+      {!p && <p className="text-sm text-zinc-500">No profile yet. Click Re-analyze above.</p>}
       <form action={action} key={JSON.stringify(p)} className="space-y-3">
         {field("Name", "name", p?.name ?? "")}
         <label className="block space-y-1 text-sm">
