@@ -28,7 +28,7 @@ export default async function ResumePage() {
   const resume = await getLatestResume(user.id);
   // Commit scanning uses the admin's GitHub token, so only the admin sees it.
   const git = user.isAdmin && resume?.profile ? { reviews: await listReviews(user.id), ...(await loadRepos()) } : null;
-  const roles = (resume?.profile?.experience ?? []).map((e, index) => ({ index, label: `${e.title} · ${e.company}` }));
+  const roles = (resume?.profile?.experience ?? []).map((e, index) => ({ index, label: `${e.title} Â· ${e.company}` }));
   return (
     <main className="space-y-4">
       <div className="flex items-center justify-between gap-2">

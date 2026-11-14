@@ -39,7 +39,7 @@ export default async function SettingsPage() {
             type="password"
             name="githubToken"
             autoComplete="off"
-            placeholder={settings.githubTokenSet ? "Leave blank to keep the saved token" : "github_pat_…"}
+            placeholder={settings.githubTokenSet ? "Leave blank to keep the saved token" : "github_pat_â€¦"}
             className="input w-full"
           />
           <span className="block text-zinc-500">{settings.githubTokenSet ? "Token saved." : "No token."}</span>
