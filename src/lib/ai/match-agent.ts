@@ -12,6 +12,8 @@ export interface MatchOptions {
   remoteOnly?: boolean;
   linkedinOnly?: boolean;
   datePosted?: SearchParams["datePosted"];
+  /** Also pull from the LinkedIn Job Search API (when enabled server-side). */
+  linkedinApi?: boolean;
 }
 
 export interface JobScore {
@@ -37,6 +39,8 @@ export type ProgressEvent =
 export interface AgentDeps {
   generateQueries(profile: ResumeProfile, opts: MatchOptions): Promise<string[]>;
   search(params: SearchParams): Promise<StoredJob[]>;
+  /** Optional second source, called once per run with the top query (its quota is tiny). */
+  searchExtra?(params: SearchParams): Promise<StoredJob[]>;
   scoreJobs(profile: ResumeProfile, jobs: StoredJob[]): Promise<JobScore[]>;
   /** True when the listing is confirmed gone. Omitted → every job is treated as live. */
   isDead?(job: StoredJob): Promise<boolean>;
@@ -133,6 +137,21 @@ export async function runMatchAgent(
       onProgress({ type: "status", message: `Search failed for "${query}": ${e instanceof Error ? e.message : e}` });
     }
   }
+  if (deps.searchExtra && queries.length) {
+    onProgress({ type: "status", message: `Searching LinkedIn API: ${queries[0]}` });
+    try {
+      const extra = await deps.searchExtra({
+        query: queries[0],
+        location: opts.location,
+        remoteOnly: opts.remoteOnly,
+        datePosted: opts.datePosted ?? "month",
+      });
+      onProgress({ type: "status", message: `LinkedIn API returned ${extra.length} jobs` });
+      found.push(...extra);
+    } catch (e) {
+      onProgress({ type: "status", message: `LinkedIn API skipped: ${e instanceof Error ? e.message : e}` });
+    }
+  }
   const unique = dedupeJobs(found);
   onProgress({ type: "found", count: unique.length });
   if (!unique.length) return [];
@@ -220,11 +239,12 @@ export async function llmScoreJobs(profile: ResumeProfile, jobs: StoredJob[]): P
   return output.scores;
 }
 
-export const llmDeps = (search: AgentDeps["search"]): AgentDeps => ({
+export const llmDeps = (search: AgentDeps["search"], searchExtra?: AgentDeps["searchExtra"]): AgentDeps => ({
   generateQueries: llmGenerateQueries,
   scoreJobs: llmScoreJobs,
   isDead: (job) => isListingDead(job.applyUrl),
   search,
+  searchExtra,
 });
 
 // ---------- persistence ----------

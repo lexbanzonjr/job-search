@@ -31,7 +31,7 @@ export function JobCard({ job, saved, children }: { job: StoredJob; saved: boole
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold break-words">{job.title}</h3>
+            <h3 className="font-semibold wrap-break-word">{job.title}</h3>
             <p className="text-sm text-zinc-600">{job.company}</p>
             <p className="text-xs text-zinc-500">{meta.join(" · ")}</p>
           </div>
