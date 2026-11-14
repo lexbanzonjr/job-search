@@ -1,6 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { all, dbOr, type Db } from "@/lib/db";
+import { isListingDead } from "@/lib/jobs/liveness";
 import { getJobsByIds } from "@/lib/jobs/store";
 import type { SearchParams, StoredJob } from "@/lib/jobs/types";
 import { getModel } from "./model";
@@ -37,10 +38,13 @@ export interface AgentDeps {
   generateQueries(profile: ResumeProfile, opts: MatchOptions): Promise<string[]>;
   search(params: SearchParams): Promise<StoredJob[]>;
   scoreJobs(profile: ResumeProfile, jobs: StoredJob[]): Promise<JobScore[]>;
+  /** True when the listing is confirmed gone. Omitted → every job is treated as live. */
+  isDead?(job: StoredJob): Promise<boolean>;
 }
 
 export const MAX_SCORED = 30;
 const SCORE_BATCH = 10;
+const LIVENESS_BATCH = 5;
 
 // ---------- pure helpers ----------
 
@@ -133,7 +137,23 @@ export async function runMatchAgent(
   onProgress({ type: "found", count: unique.length });
   if (!unique.length) return [];
 
-  const shortlist = prefilter(profile, unique);
+  const ranked = prefilter(profile, unique, unique.length);
+  let shortlist = ranked.slice(0, MAX_SCORED);
+  if (deps.isDead) {
+    onProgress({ type: "status", message: "Checking listings are still open…" });
+    shortlist = [];
+    let skipped = 0;
+    for (let i = 0; i < ranked.length && shortlist.length < MAX_SCORED; i += LIVENESS_BATCH) {
+      const batch = ranked.slice(i, i + LIVENESS_BATCH);
+      const dead = await Promise.all(batch.map((j) => deps.isDead!(j).catch(() => false)));
+      batch.forEach((j, k) => {
+        if (dead[k]) skipped++;
+        else if (shortlist.length < MAX_SCORED) shortlist.push(j);
+      });
+    }
+    if (skipped) onProgress({ type: "status", message: `Skipped ${skipped} expired listing${skipped === 1 ? "" : "s"}` });
+    if (!shortlist.length) return [];
+  }
   const scores: JobScore[] = [];
   for (let i = 0; i < shortlist.length; i += SCORE_BATCH) {
     onProgress({ type: "scored", done: i, total: shortlist.length });
@@ -203,6 +223,7 @@ export async function llmScoreJobs(profile: ResumeProfile, jobs: StoredJob[]): P
 export const llmDeps = (search: AgentDeps["search"]): AgentDeps => ({
   generateQueries: llmGenerateQueries,
   scoreJobs: llmScoreJobs,
+  isDead: (job) => isListingDead(job.applyUrl),
   search,
 });
 

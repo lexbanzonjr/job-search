@@ -81,6 +81,25 @@ describe("runMatchAgent", () => {
     expect(results[0].score).toBeGreaterThanOrEqual(results[13].score);
   });
 
+  it("skips dead listings and backfills with the next-best live jobs", async () => {
+    const jobs = Array.from({ length: 40 }, (_, i) => job(`Frontend Engineer ${i}`, `C${i}`));
+    const deadIds = new Set(jobs.slice(0, 5).map((j) => j.id));
+    const deps: AgentDeps = {
+      generateQueries: async () => ["frontend engineer"],
+      search: async () => jobs,
+      scoreJobs: vi.fn(async (_p, js: StoredJob[]) =>
+        js.map((j) => ({ jobId: j.id, score: 60, matchedSkills: [], gaps: [], reason: "" })),
+      ),
+      isDead: vi.fn(async (j: StoredJob) => deadIds.has(j.id)),
+    };
+    const events: ProgressEvent[] = [];
+    const results = await runMatchAgent(profile, {}, deps, (e) => events.push(e));
+    expect(results).toHaveLength(30);
+    expect(results.some((r) => deadIds.has(r.jobId))).toBe(false);
+    expect(deps.isDead).toHaveBeenCalledTimes(35); // stops once 30 live jobs are found
+    expect(events).toContainEqual({ type: "status", message: "Skipped 5 expired listings" });
+  });
+
   it("keeps going when a search fails and returns [] with no jobs", async () => {
     const deps: AgentDeps = {
       generateQueries: async () => ["a", "b"],
