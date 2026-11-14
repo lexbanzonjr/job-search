@@ -2,11 +2,11 @@ import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { getCoverLetters } from "@/lib/ai/cover-letter";
 import { listMatches } from "@/lib/ai/match-agent";
-import { linkedInEnabled } from "@/lib/jobs/linkedin-api";
 import { SORT_KEYS, parseSortKey, sortMatches, type SortKey } from "@/lib/jobs/sort";
 import { getSavedIds } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
 import { requireUser } from "@/lib/session";
+import { getAppSettings } from "@/lib/settings";
 import { CoverLetter } from "./CoverLetter";
 import { RunMatch } from "./RunMatch";
 
@@ -33,7 +33,11 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       </main>
     );
   }
-  const [rawMatches, saved] = await Promise.all([listMatches(resume.id), getSavedIds(user.id)]);
+  const [rawMatches, saved, settings] = await Promise.all([
+    listMatches(resume.id),
+    getSavedIds(user.id),
+    getAppSettings(),
+  ]);
   const matches = sortMatches(rawMatches, sort);
   const letters = await getCoverLetters(user.id, matches.map((m) => m.jobId));
 
@@ -45,7 +49,7 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           Based on <span className="font-medium">{resume.filename}</span>, targeting {resume.profile.targetTitles.slice(0, 3).join(", ")}.
         </p>
       </div>
-      <RunMatch defaultLocation={resume.profile.locations[0] ?? ""} linkedinApi={linkedInEnabled()} />
+      <RunMatch defaultLocation={resume.profile.locations[0] ?? ""} linkedinApi={settings.linkedinApi} />
       {matches.length > 1 && (
         <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="text-zinc-500">Sort by:</span>

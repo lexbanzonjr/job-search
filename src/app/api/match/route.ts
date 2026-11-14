@@ -1,9 +1,9 @@
 import { llmDeps, runMatchAgent, saveMatches, type MatchOptions, type ProgressEvent } from "@/lib/ai/match-agent";
-import { linkedInEnabled } from "@/lib/jobs/linkedin-api";
 import { searchJobs, searchLinkedIn } from "@/lib/jobs/store";
 import type { SearchParams } from "@/lib/jobs/types";
 import { getLatestResume } from "@/lib/resume/store";
 import { getUser } from "@/lib/session";
+import { getAppSettings } from "@/lib/settings";
 import { consume, LimitError } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,8 @@ export async function POST(request: Request) {
     async start(controller) {
       const send = (e: ProgressEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
       try {
-        const extra = opts.linkedinApi && linkedInEnabled() ? (p: SearchParams) => searchLinkedIn(p) : undefined;
+        const { linkedinApi } = await getAppSettings();
+        const extra = opts.linkedinApi && linkedinApi ?(p: SearchParams) => searchLinkedIn(p) : undefined;
         const deps = llmDeps(async (p) => (await searchJobs(p)).jobs, extra);
         const results = await runMatchAgent(profile, opts, deps, send);
         await saveMatches(resume.id, results);

@@ -88,5 +88,3 @@ export async function fetchLinkedIn(p: SearchParams, fetchImpl: typeof fetch = f
   const items = (await res.json()) as LinkedInItem[];
   return Array.isArray(items) ? items.map(normalizeLinkedIn) : [];
 }
-
-export const linkedInEnabled = () => process.env.LINKEDIN_API_ENABLED === "1";
