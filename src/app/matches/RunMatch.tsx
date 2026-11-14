@@ -67,12 +67,12 @@ export function RunMatch({ defaultLocation }: { defaultLocation: string }) {
         </select>
         <button disabled={running} className="btn">{running ? "Finding matches…" : "Find matches"}</button>
       </div>
-      <div className="flex gap-6 text-sm">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" name="linkedin" value="1" defaultChecked /> LinkedIn only</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="remote" value="1" /> Remote only</label>
       </div>
       {log.length > 0 && (
-        <ul className="space-y-0.5 rounded bg-zinc-50 p-3 font-mono text-xs text-zinc-600">
+        <ul className="space-y-0.5 overflow-x-auto break-words rounded bg-zinc-50 p-3 font-mono text-xs text-zinc-600">
           {log.map((l, i) => <li key={i}>{l}</li>)}
         </ul>
       )}
