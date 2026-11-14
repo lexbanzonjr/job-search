@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
-import type { ResumeProfile } from "@/lib/ai/profile";
+import { useActionState, useState, type ReactNode } from "react";
+import type { ExperienceEntry, ResumeProfile } from "@/lib/ai/profile";
 import { reanalyzeAction, saveProfileAction, uploadResumeAction, type ActionState } from "./actions";
 
 function Status({ state }: { state: ActionState }) {
@@ -89,9 +89,103 @@ export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
         <Section title="Skills">
           {field("Skills", "skills", p?.skills.join(", ") ?? "", "comma-separated")}
         </Section>
+        <Section title="Experience">
+          <ExperienceEditor initial={p?.experience ?? []} />
+        </Section>
         <button disabled={pending} className="btn">{pending ? "Saving…" : "Save profile"}</button>
         <Status state={state} />
       </form>
+    </div>
+  );
+}
+
+const EMPTY_ROLE: ExperienceEntry = { title: "", company: "", location: "", startDate: "", endDate: "", highlights: [] };
+type RoleField = "title" | "company" | "location" | "startDate" | "endDate";
+
+function ExperienceEditor({ initial }: { initial: ExperienceEntry[] }) {
+  const [roles, setRoles] = useState(initial);
+  const [editing, setEditing] = useState(-1);
+  const update = (i: number, patch: Partial<ExperienceEntry>) =>
+    setRoles((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const input = (i: number, key: RoleField, label: string) => (
+    <label className="block space-y-1 text-xs">
+      <span className="font-medium text-zinc-600">{label}</span>
+      <input value={roles[i][key]} onChange={(e) => update(i, { [key]: e.target.value })} className="input" />
+    </label>
+  );
+
+  return (
+    <div className="space-y-3">
+      <input type="hidden" name="experience" value={JSON.stringify(roles)} />
+      {roles.length === 0 && <p className="text-sm text-zinc-500">No roles yet.</p>}
+      {roles.map((r, i) => (
+        <div key={i} className="rounded-md border border-zinc-200 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">
+                {r.title || "Untitled role"}
+                {r.company && <span className="font-normal text-zinc-600"> · {r.company}</span>}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {[r.location, [r.startDate, r.endDate].filter(Boolean).join(" – ")].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setEditing(editing === i ? -1 : i)}>
+                {editing === i ? "Done" : "Edit"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary text-red-600"
+                onClick={() => {
+                  setRoles((rs) => rs.filter((_, j) => j !== i));
+                  setEditing(-1);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+          {editing === i ? (
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {input(i, "title", "Title")}
+                {input(i, "company", "Company")}
+                {input(i, "location", "Location")}
+                <div className="grid grid-cols-2 gap-2">
+                  {input(i, "startDate", "Start")}
+                  {input(i, "endDate", "End")}
+                </div>
+              </div>
+              <label className="block space-y-1 text-xs">
+                <span className="font-medium text-zinc-600">Highlights (one per line)</span>
+                <textarea
+                  rows={4}
+                  className="input"
+                  value={r.highlights.join("\n")}
+                  onChange={(e) => update(i, { highlights: e.target.value.split("\n") })}
+                />
+              </label>
+            </div>
+          ) : (
+            r.highlights.some((h) => h.trim()) && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
+                {r.highlights.filter((h) => h.trim()).map((h, k) => <li key={k}>{h}</li>)}
+              </ul>
+            )
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={() => {
+          setRoles((rs) => [...rs, EMPTY_ROLE]);
+          setEditing(roles.length);
+        }}
+      >
+        + Add role
+      </button>
     </div>
   );
 }

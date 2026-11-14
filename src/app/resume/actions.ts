@@ -33,6 +33,14 @@ export async function uploadResumeAction(_prev: ActionState, formData: FormData)
 const list = (v: FormDataEntryValue | null) =>
   String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
+function parseJson(v: FormDataEntryValue | null): unknown {
+  try {
+    return JSON.parse(String(v ?? "[]"));
+  } catch {
+    return [];
+  }
+}
+
 export async function saveProfileAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser();
   const resume = await getLatestResume(user.id);
@@ -46,6 +54,7 @@ export async function saveProfileAction(_prev: ActionState, formData: FormData):
     seniority: String(formData.get("seniority")),
     locations: list(formData.get("locations")),
     industries: list(formData.get("industries")),
+    experience: parseJson(formData.get("experience")),
   });
   if (!parsed.success) return { error: "Invalid profile: " + parsed.error.issues.map((i) => i.path.join(".")).join(", ") };
   await updateProfile(user.id, resume.id, parsed.data);
