@@ -3,6 +3,7 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { toggleSaveAction } from "@/app/actions";
 import type { StoredJob } from "@/lib/jobs/types";
+import { JobDescription } from "./JobDescription";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -61,7 +62,7 @@ export function JobCard({ job, saved, children }: { job: StoredJob; saved: boole
           <button className="text-sm text-blue-600 hover:underline" onClick={() => setOpen(!open)}>
             {open ? "Hide description" : "Show description"}
           </button>
-          {open && <p className="mt-2 whitespace-pre-line text-sm text-zinc-700">{job.description}</p>}
+          {open && <JobDescription text={job.description} />}
         </div>
       )}
     </article>
