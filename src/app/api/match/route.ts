@@ -2,6 +2,7 @@ import { llmDeps, runMatchAgent, saveMatches, type MatchOptions, type ProgressEv
 import { searchJobs } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
 import { getUser } from "@/lib/session";
+import { consume, LimitError } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -16,6 +17,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Upload a resume and generate its profile first." }, { status: 400 });
   }
   const profile = resume.profile;
+  try {
+    await consume(user, "match");
+  } catch (e) {
+    if (e instanceof LimitError) return Response.json({ error: e.message }, { status: 429 });
+    throw e;
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

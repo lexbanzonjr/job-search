@@ -75,6 +75,14 @@ const MIGRATIONS: string[] = [
      SELECT 0, job_id, status, notes, saved_at FROM saved_jobs;
    DROP TABLE saved_jobs;
    ALTER TABLE saved_jobs_v3 RENAME TO saved_jobs;`,
+  // Per-user daily counters for paid API calls.
+  `CREATE TABLE usage (
+     user_id INTEGER NOT NULL,
+     day TEXT NOT NULL,
+     kind TEXT NOT NULL,
+     count INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (user_id, day, kind)
+   );`,
 ];
 
 /**
