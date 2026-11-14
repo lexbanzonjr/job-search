@@ -44,7 +44,7 @@ describe("github client", () => {
     );
     const out = await searchMyCommits({ repo: "o/r", since: "2026-01-01" }, f as unknown as typeof fetch);
     expect(out).toEqual([{ repo: "o/r", sha: "1", message: "Add search", committedAt: "2026-02-01" }]);
-    expect(String(f.mock.calls[0][0])).toContain("/repos/o/r/commits?author=me");
+    expect(String((f.mock.calls[0] as unknown[])[0])).toContain("/repos/o/r/commits?author=me");
   });
 
   it("fetches commit detail", async () => {
