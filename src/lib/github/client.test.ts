@@ -1,16 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const config = vi.hoisted(() => ({ token: "t" as string | null, login: "me" as string | null }));
+vi.mock("@/lib/settings", () => ({ getGitHubConfig: async () => ({ ...config }) }));
+
 import { buildCommitSearchQuery, getCommitDetail, isNoiseCommit, searchMyCommits, trimPatch } from "./client";
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
 
 describe("github client", () => {
   beforeEach(() => {
-    process.env.GITHUB_TOKEN = "t";
-    process.env.GITHUB_LOGIN = "me";
-  });
-  afterEach(() => {
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.GITHUB_LOGIN;
+    config.token = "t";
+    config.login = "me";
   });
 
   it("builds a search query", () => {
@@ -45,6 +44,11 @@ describe("github client", () => {
     const out = await searchMyCommits({ repo: "o/r", since: "2026-01-01" }, f as unknown as typeof fetch);
     expect(out).toEqual([{ repo: "o/r", sha: "1", message: "Add search", committedAt: "2026-02-01" }]);
     expect(String((f.mock.calls[0] as unknown[])[0])).toContain("/repos/o/r/commits?author=me");
+  });
+
+  it("asks for a token on Settings when none is saved", async () => {
+    config.token = null;
+    await expect(getCommitDetail("o/r", "1", vi.fn() as unknown as typeof fetch)).rejects.toThrow("Settings");
   });
 
   it("fetches commit detail", async () => {
