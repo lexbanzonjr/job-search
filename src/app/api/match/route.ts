@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     async start(controller) {
       const send = (e: ProgressEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
       try {
-        const results = await runMatchAgent(profile, opts, llmDeps((p) => searchJobs(p)), send);
+        const results = await runMatchAgent(profile, opts, llmDeps(async (p) => (await searchJobs(p)).jobs), send);
         saveMatches(resume.id, results);
         send({ type: "done", count: results.length });
       } catch (e) {

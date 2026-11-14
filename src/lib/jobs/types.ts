@@ -7,7 +7,8 @@ export interface SearchParams {
   remoteOnly?: boolean;
   datePosted?: DatePosted;
   employmentType?: EmploymentType | "";
-  page?: number;
+  /** JSearch v2 pagination token from the previous page. */
+  cursor?: string;
   linkedinOnly?: boolean;
 }
 

@@ -16,7 +16,7 @@ function parseParams(q: Query): SearchParams {
     datePosted: (one(q.date) || "all") as DatePosted,
     employmentType: one(q.type) as EmploymentType | "",
     linkedinOnly: one(q.linkedin) === "1",
-    page: Math.max(1, Number(one(q.page)) || 1),
+    cursor: one(q.cursor) || undefined,
   };
 }
 
@@ -27,16 +27,17 @@ export default async function SearchPage({ searchParams }: PageProps<"/">) {
   const linkedinChecked = p.query ? p.linkedinOnly : true;
 
   let jobs: StoredJob[] = [];
+  let nextCursor: string | null = null;
   let error = "";
   if (p.query.trim()) {
     try {
-      jobs = await searchJobs(p);
+      ({ jobs, nextCursor } = await searchJobs(p));
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
   const saved = getSavedIds();
-  const pageHref = (page: number) => `/?${new URLSearchParams({ ...(q as Record<string, string>), page: String(page) })}`;
+  const nextHref = (cursor: string) => `/?${new URLSearchParams({ ...(q as Record<string, string>), cursor })}`;
 
   return (
     <main className="space-y-6">
@@ -76,10 +77,9 @@ export default async function SearchPage({ searchParams }: PageProps<"/">) {
         ))}
       </div>
 
-      {p.query && !error && (
-        <div className="flex justify-between">
-          {p.page! > 1 ? <Link href={pageHref(p.page! - 1)} className="btn-secondary">← Previous</Link> : <span />}
-          {jobs.length > 0 && <Link href={pageHref(p.page! + 1)} className="btn-secondary">Next →</Link>}
+      {p.query && !error && nextCursor && (
+        <div className="flex justify-end">
+          <Link href={nextHref(nextCursor)} className="btn-secondary">Next page →</Link>
         </div>
       )}
     </main>

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { openDb } from "@/lib/db";
-import { buildQueryString, fetchJSearch, isLinkedInJob, normalizeJob, type JSearchItem } from "./jsearch";
+import { buildQueryString, decodeEntities, fetchJSearch, isLinkedInJob, normalizeJob, type JSearchItem } from "./jsearch";
 import { cacheKey, searchJobs } from "./store";
 
 const linkedin: JSearchItem = {
@@ -55,6 +55,12 @@ describe("normalizeJob", () => {
   });
 });
 
+describe("decodeEntities", () => {
+  it("decodes numeric and named entities", () => {
+    expect(decodeEntities("Tech Lead &#8211; React &#038; Python &amp; Go &#x27;24")).toBe("Tech Lead – React & Python & Go '24");
+  });
+});
+
 describe("isLinkedInJob", () => {
   it("detects LinkedIn via publisher or apply options", () => {
     expect(isLinkedInJob(linkedin)).toBe(true);
@@ -66,13 +72,14 @@ describe("isLinkedInJob", () => {
 describe("buildQueryString", () => {
   it("adds location, LinkedIn hint and filters", () => {
     const qs = new URLSearchParams(
-      buildQueryString({ query: "react", location: "Anaheim", linkedinOnly: true, remoteOnly: true, datePosted: "week", employmentType: "FULLTIME", page: 2 }),
+      buildQueryString({ query: "react", location: "Anaheim", linkedinOnly: true, remoteOnly: true, datePosted: "week", employmentType: "FULLTIME", cursor: "abc" }),
     );
     expect(qs.get("query")).toBe("react in Anaheim via linkedin");
     expect(qs.get("work_from_home")).toBe("true");
     expect(qs.get("date_posted")).toBe("week");
     expect(qs.get("employment_types")).toBe("FULLTIME");
-    expect(qs.get("page")).toBe("2");
+    expect(qs.get("cursor")).toBe("abc");
+    expect(qs.get("country")).toBe("us");
   });
 
   it("omits defaults", () => {
@@ -89,9 +96,19 @@ describe("fetchJSearch", () => {
 
   it("filters to LinkedIn jobs when asked", async () => {
     process.env.RAPIDAPI_KEY = "k";
-    const fetchMock = vi.fn(async () => Response.json({ data: [linkedin, indeedWithLinkedInOption, indeedOnly] }));
-    const jobs = await fetchJSearch({ query: "dev", linkedinOnly: true }, fetchMock as unknown as typeof fetch);
-    expect(jobs.map((j) => j.sourceId)).toEqual(["a1", "b2"]);
+    const fetchMock = vi.fn<typeof fetch>(async () =>
+      Response.json({ data: { jobs: [linkedin, indeedWithLinkedInOption, indeedOnly], cursor: "next1" } }),
+    );
+    const page = await fetchJSearch({ query: "dev", linkedinOnly: true }, fetchMock);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/search-v2?");
+    expect(page.jobs.map((j) => j.sourceId)).toEqual(["a1", "b2"]);
+    expect(page.nextCursor).toBe("next1");
+  });
+
+  it("explains a 403 from RapidAPI", async () => {
+    process.env.RAPIDAPI_KEY = "k";
+    const fetchMock = vi.fn(async () => new Response("{}", { status: 403 }));
+    await expect(fetchJSearch({ query: "dev" }, fetchMock as unknown as typeof fetch)).rejects.toThrow(/subscribed to JSearch/);
   });
 
   it("throws a clear error without an API key", async () => {
@@ -110,12 +127,13 @@ describe("searchJobs cache", () => {
 
   it("calls the API once per parameter set within the TTL", async () => {
     process.env.RAPIDAPI_KEY = "k";
-    const fetchMock = vi.fn(async () => Response.json({ data: [linkedin, indeedOnly] }));
+    const fetchMock = vi.fn(async () => Response.json({ data: { jobs: [linkedin, indeedOnly], cursor: "c2" } }));
     vi.stubGlobal("fetch", fetchMock);
     const first = await searchJobs({ query: "Dev" }, db);
     const second = await searchJobs({ query: " dev " }, db);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(second.map((j) => j.sourceId)).toEqual(first.map((j) => j.sourceId));
+    expect(second.jobs.map((j) => j.sourceId)).toEqual(first.jobs.map((j) => j.sourceId));
+    expect(second.nextCursor).toBe("c2");
     expect(cacheKey({ query: "Dev" })).toBe(cacheKey({ query: " dev " }));
   });
 });
