@@ -10,7 +10,7 @@ export default async function ResumePage() {
   return (
     <main className="space-y-4">
       <h1 className="text-xl font-semibold">Resume</h1>
-      <UploadForm />
+      <UploadForm hasResume={!!resume} />
       {resume && (
         <>
           <p className="text-sm text-zinc-500">
