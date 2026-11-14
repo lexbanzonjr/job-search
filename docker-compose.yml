@@ -6,8 +6,8 @@ services:
     init: true
     restart: unless-stopped
     ports:
-      # Use "127.0.0.1:6972:6972" to restrict it to this machine.
-      - "6972:6972"
+      # Use "127.0.0.1:6973:6972" to restrict it to this machine.
+      - "6973:6972"
     # Login, RapidAPI and Anthropic keys. The values below win over it.
     env_file: .env
     environment:
