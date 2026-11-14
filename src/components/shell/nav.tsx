@@ -15,7 +15,9 @@ const within = (pathname: string, href: string) =>
 
 export function NavLinks({ isAdmin, onNavigate }: { isAdmin: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const items = isAdmin ? [...NAV, { href: "/users", label: "Users" }] : NAV;
+  const items = isAdmin
+    ? [...NAV, { href: "/users", label: "Users" }, { href: "/settings", label: "Settings" }]
+    : NAV;
   return (
     <nav className="grid gap-1">
       {items.map(({ href, label }) => {

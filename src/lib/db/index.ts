@@ -91,6 +91,11 @@ const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (datetime('now')),
      UNIQUE (user_id, job_id)
    );`,
+  // App-wide settings edited by admins on /settings.
+  `CREATE TABLE settings (
+     key TEXT PRIMARY KEY,
+     value TEXT NOT NULL
+   );`,
 ];
 
 /**

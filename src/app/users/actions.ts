@@ -1,15 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { deleteUser, upsertUser } from "@/lib/users";
-
-async function requireAdmin() {
-  const user = await requireUser();
-  if (!user.isAdmin) notFound();
-  return user;
-}
 
 export async function saveUserAction(_prev: string | null, formData: FormData): Promise<string | null> {
   await requireAdmin();

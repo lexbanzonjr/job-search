@@ -1,5 +1,4 @@
-import { notFound } from "next/navigation";
-import { requireUser } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { listUsers } from "@/lib/users";
 import { deleteUserAction } from "./actions";
 import { UserForm } from "./UserForm";
@@ -7,8 +6,7 @@ import { UserForm } from "./UserForm";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  const me = await requireUser();
-  if (!me.isAdmin) notFound();
+  const me = await requireAdmin();
   const users = await listUsers();
   return (
     <main className="space-y-4">

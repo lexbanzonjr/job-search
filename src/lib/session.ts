@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 import { findUser, type User } from "@/lib/users";
 
@@ -13,5 +13,12 @@ export async function getUser(): Promise<User | null> {
 export async function requireUser(): Promise<User> {
   const user = await getUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+/** The signed-in admin; non-admins get a 404 so admin pages stay hidden. */
+export async function requireAdmin(): Promise<User> {
+  const user = await requireUser();
+  if (!user.isAdmin) notFound();
   return user;
 }
