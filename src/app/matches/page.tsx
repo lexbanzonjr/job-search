@@ -2,6 +2,7 @@ import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { getCoverLetters } from "@/lib/ai/cover-letter";
 import { listMatches } from "@/lib/ai/match-agent";
+import { SORT_KEYS, parseSortKey, sortMatches, type SortKey } from "@/lib/jobs/sort";
 import { getSavedIds } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
 import { requireUser } from "@/lib/session";
@@ -17,7 +18,10 @@ function scoreClass(score: number) {
   return "bg-zinc-100 text-zinc-600";
 }
 
-export default async function MatchesPage() {
+const SORT_LABELS: Record<SortKey, string> = { match: "Match %", posted: "Newest", salary: "Salary" };
+
+export default async function MatchesPage({ searchParams }: { searchParams: Promise<{ sort?: string }> }) {
+  const sort = parseSortKey((await searchParams).sort);
   const user = await requireUser();
   const resume = await getLatestResume(user.id);
   if (!resume?.profile) {
@@ -28,7 +32,8 @@ export default async function MatchesPage() {
       </main>
     );
   }
-  const [matches, saved] = await Promise.all([listMatches(resume.id), getSavedIds(user.id)]);
+  const [rawMatches, saved] = await Promise.all([listMatches(resume.id), getSavedIds(user.id)]);
+  const matches = sortMatches(rawMatches, sort);
   const letters = await getCoverLetters(user.id, matches.map((m) => m.jobId));
 
   return (
@@ -40,7 +45,21 @@ export default async function MatchesPage() {
         </p>
       </div>
       <RunMatch defaultLocation={resume.profile.locations[0] ?? ""} />
-      {matches.length === 0 && <p className="text-sm text-zinc-500">No matches yet. Click Find matches.</p>}
+      {matches.length > 1 && (
+        <nav className="flex items-center gap-3 text-sm">
+          <span className="text-zinc-500">Sort by:</span>
+          {SORT_KEYS.map((k) => (
+            <Link
+              key={k}
+              href={k === "match" ? "/matches" : `/matches?sort=${k}`}
+              className={k === sort ? "font-semibold text-zinc-900" : "text-blue-600 hover:underline"}
+            >
+              {SORT_LABELS[k]}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {matches.length === 0 &&<p className="text-sm text-zinc-500">No matches yet. Click Find matches.</p>}
       {matches.map((m) => (
         <JobCard key={m.jobId} job={m.job} saved={saved.has(m.jobId)}>
           <div className="space-y-1 rounded bg-zinc-50 p-3 text-sm">
