@@ -1,5 +1,6 @@
 import { all, one, dbOr, type Db } from "@/lib/db";
 import { fetchJSearch } from "./jsearch";
+import { fetchLinkedIn } from "./linkedin-api";
 import type { Job, SavedStatus, SearchParams, StoredJob } from "./types";
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -87,9 +88,24 @@ export interface SearchResult {
 }
 
 /** Search JSearch, caching each parameter set for an hour to save API quota. Shared across users. */
-export async function searchJobs(p: SearchParams, db?: Db): Promise<SearchResult> {
+export function searchJobs(p: SearchParams, db?: Db): Promise<SearchResult> {
+  return cachedSearch(cacheKey(p), p, () => fetchJSearch(p), db);
+}
+
+/** Search the LinkedIn Job Search API. Its free quota is tiny, so the hour cache matters even more. */
+export async function searchLinkedIn(p: SearchParams, db?: Db): Promise<StoredJob[]> {
+  const fetchPage = async () => ({ jobs: await fetchLinkedIn(p), nextCursor: null });
+  return (await cachedSearch(`li:${cacheKey(p)}`, p, fetchPage, db)).jobs;
+}
+
+/** Run `fetchPage` unless the same cache key was fetched within the hour. */
+async function cachedSearch(
+  key: string,
+  p: SearchParams,
+  fetchPage: () => Promise<{ jobs: Job[]; nextCursor: string | null }>,
+  db?: Db,
+): Promise<SearchResult> {
   const c = await dbOr(db);
-  const key = cacheKey(p);
   const cached = await one<{ job_ids_json: string; next_cursor: string | null; created_at: string }>(
     c,
     "SELECT job_ids_json, next_cursor, created_at FROM searches WHERE cache_key = ?",
@@ -99,7 +115,7 @@ export async function searchJobs(p: SearchParams, db?: Db): Promise<SearchResult
     return { jobs: await getJobsByIds(JSON.parse(cached.job_ids_json), c), nextCursor: cached.next_cursor };
   }
 
-  const page = await fetchJSearch(p);
+  const page = await fetchPage();
   const ids = await upsertJobs(page.jobs, c);
   await c.execute({
     sql: `INSERT INTO searches (cache_key, params_json, job_ids_json, next_cursor) VALUES (?, ?, ?, ?)

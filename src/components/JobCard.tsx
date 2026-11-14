@@ -20,21 +20,23 @@ export function JobCard({ job, saved, children }: { job: StoredJob; saved: boole
 
   return (
     <article className="card space-y-2">
-      <div className="flex items-start gap-3">
-        {job.logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={job.logoUrl} alt="" className="h-10 w-10 rounded object-contain" />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded bg-zinc-100 text-zinc-400">
-            {job.company.charAt(0) || "?"}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {job.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={job.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded object-contain" />
+          ) : (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-400">
+              {job.company.charAt(0) || "?"}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold wrap-break-word">{job.title}</h3>
+            <p className="text-sm text-zinc-600">{job.company}</p>
+            <p className="text-xs text-zinc-500">{meta.join(" · ")}</p>
           </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold">{job.title}</h3>
-          <p className="text-sm text-zinc-600">{job.company}</p>
-          <p className="text-xs text-zinc-500">{meta.join(" · ")}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {job.publisher && (
             <span
               className={`rounded px-2 py-0.5 text-xs ${/linkedin/i.test(job.publisher) ? "bg-sky-100 text-sky-800" : "bg-zinc-100 text-zinc-600"}`}

@@ -114,6 +114,38 @@ describe("runMatchAgent", () => {
     expect(deps.scoreJobs).not.toHaveBeenCalled();
     expect(events.some((e) => e.type === "status" && e.message.includes("quota"))).toBe(true);
   });
+
+  it("calls the extra source once with the top query and merges its jobs", async () => {
+    const liJob = job("Frontend Engineer LI", "LinkedCo");
+    const deps: AgentDeps = {
+      generateQueries: async () => ["frontend engineer", "react developer"],
+      search: async () => [job("Frontend Engineer", "Acme")],
+      searchExtra: vi.fn(async () => [liJob]),
+      scoreJobs: vi.fn(async (_p, js: StoredJob[]) =>
+        js.map((j) => ({ jobId: j.id, score: 70, matchedSkills: [], gaps: [], reason: "" })),
+      ),
+    };
+    const results = await runMatchAgent(profile, { location: "Anaheim" }, deps);
+    expect(deps.searchExtra).toHaveBeenCalledTimes(1);
+    expect(deps.searchExtra).toHaveBeenCalledWith(expect.objectContaining({ query: "frontend engineer", location: "Anaheim" }));
+    expect(results.map((r) => r.jobId)).toContain(liJob.id);
+  });
+
+  it("carries on with the main source when the extra source fails", async () => {
+    const deps: AgentDeps = {
+      generateQueries: async () => ["frontend engineer"],
+      search: async () => [job("Frontend Engineer", "Acme")],
+      searchExtra: vi.fn(async () => {
+        throw new Error("LinkedIn API monthly quota reached.");
+      }),
+      scoreJobs: vi.fn(async (_p, js: StoredJob[]) =>
+        js.map((j) => ({ jobId: j.id, score: 70, matchedSkills: [], gaps: [], reason: "" })),
+      ),
+    };
+    const events: ProgressEvent[] = [];
+    expect(await runMatchAgent(profile, {}, deps, (e) => events.push(e))).toHaveLength(1);
+    expect(events.some((e) => e.type === "status" && e.message.startsWith("LinkedIn API skipped"))).toBe(true);
+  });
 });
 
 describe("saveMatches / listMatches", () => {

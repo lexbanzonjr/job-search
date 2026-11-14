@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ProgressEvent } from "@/lib/ai/match-agent";
 
-export function RunMatch({ defaultLocation }: { defaultLocation: string }) {
+export function RunMatch({ defaultLocation, linkedinApi }: { defaultLocation: string; linkedinApi: boolean }) {
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -24,6 +24,7 @@ export function RunMatch({ defaultLocation }: { defaultLocation: string }) {
           remoteOnly: form.get("remote") === "1",
           linkedinOnly: form.get("linkedin") === "1",
           datePosted: String(form.get("date") ?? "month"),
+          linkedinApi: form.get("liapi") === "1",
         }),
       });
       if (!res.ok || !res.body) {
@@ -67,12 +68,17 @@ export function RunMatch({ defaultLocation }: { defaultLocation: string }) {
         </select>
         <button disabled={running} className="btn">{running ? "Finding matches…" : "Find matches"}</button>
       </div>
-      <div className="flex gap-6 text-sm">
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" name="linkedin" value="1" defaultChecked /> LinkedIn only</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="remote" value="1" /> Remote only</label>
+        {linkedinApi && (
+          <label className="flex items-center gap-2" title="Uses 1 of 25 free monthly LinkedIn API requests (cached for an hour)">
+            <input type="checkbox" name="liapi" value="1" defaultChecked /> Include LinkedIn API
+          </label>
+        )}
       </div>
       {log.length > 0 && (
-        <ul className="space-y-0.5 rounded bg-zinc-50 p-3 font-mono text-xs text-zinc-600">
+        <ul className="space-y-0.5 overflow-x-auto wrap-break-word rounded bg-zinc-50 p-3 font-mono text-xs text-zinc-600">
           {log.map((l, i) => <li key={i}>{l}</li>)}
         </ul>
       )}

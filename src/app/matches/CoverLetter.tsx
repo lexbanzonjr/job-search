@@ -29,7 +29,7 @@ export function CoverLetter({ jobId, initial }: { jobId: number; initial: string
 
   if (!saved) {
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button className="btn-secondary" disabled={pending} onClick={() => generate(false)}>
           {pending ? "Writing…" : "✍ Write cover letter"}
         </button>

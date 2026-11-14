@@ -1,0 +1,71 @@
+[
+  {
+    "id": 2468113749,
+    "title": "Senior Software Engineer (5G)",
+    "organization": "CyberCoders",
+    "organization_logo": "https://media.licdn.com/dms/image/v2/D4E0BAQGMExGUrmJKcQ/company-logo_200_200/B4EZ4jvxTvJEAE-/0/1778716186084/cybercoders_logo?e=2147483647&v=beta&t=mWtDYrGQp2w5dDulJlh4CHvYhElzOIDzfbW1zNWJI6g",
+    "url": "https://www.linkedin.com/jobs/view/senior-software-engineer-5g-at-cybercoders-4489333741",
+    "date_posted": "2026-11-14T14:13:22",
+    "locations_derived": [
+      "Vista, California, United States"
+    ],
+    "location_type": null,
+    "ai_work_arrangement": "On-site",
+    "ai_salary_min_value": 200000,
+    "ai_salary_max_value": 250000,
+    "ai_salary_value": null,
+    "ai_salary_unit_text": "YEAR",
+    "ai_salary_currency": "USD",
+    "ai_employment_type": [
+      "FULL_TIME"
+    ],
+    "source": "linkedin",
+    "description_text": "Senior Software Engineer (5G)\nCompany Overview\nWe are located in San Diego, CA and we are a publicly traded communications company that has proudly been in business for over 20 years! We are on a mission to provide the highest quality service possible and bridging the digital divide across the globe"
+  },
+  {
+    "id": 2468089564,
+    "title": "Senior Mission Software Engineer, Vehicle Software, Active Clearance",
+    "organization": "Anduril Industries",
+    "organization_logo": "https://media.licdn.com/dms/image/v2/C560BAQE_NOVau3lvmw/company-logo_200_200/company-logo_200_200/0/1630637180845/andurilindustries_logo?e=2147483647&v=beta&t=MzJis4bU0j9H1uhZhnHjAwq-71U4FILNIM8Q_dkV24E",
+    "url": "https://www.linkedin.com/jobs/view/senior-mission-software-engineer-vehicle-software-active-clearance-at-anduril-industries-4309061425",
+    "date_posted": "2026-11-14T13:49:03",
+    "locations_derived": [
+      "Costa Mesa, California, United States"
+    ],
+    "location_type": null,
+    "ai_work_arrangement": "On-site",
+    "ai_salary_min_value": 191000,
+    "ai_salary_max_value": 253000,
+    "ai_salary_value": null,
+    "ai_salary_unit_text": "YEAR",
+    "ai_salary_currency": "USD",
+    "ai_employment_type": [
+      "FULL_TIME"
+    ],
+    "source": "linkedin",
+    "description_text": "Anduril Industries is a defense technology company with a mission to transform U.S. and allied military capabilities with advanced technology. By bringing the expertise, technology, and business model of the 21st century’s most innovative companies to the defense industry, Anduril is changing how mi"
+  },
+  {
+    "id": 2468029951,
+    "title": "Software Engineer II - Mobile Apps",
+    "organization": "Nord Resume",
+    "organization_logo": "https://media.licdn.com/dms/image/v2/D560BAQFwZnNuC7d0Pg/company-logo_200_200/B56ZoM5PpAJ4AI-/0/1761152925253?e=2147483647&v=beta&t=pygAZh-l9nN12PHuZVjnk6x8f-0AoXInV-VdwHtb2Ms",
+    "url": "https://www.linkedin.com/jobs/view/software-engineer-ii-mobile-apps-at-nord-resume-4491078401",
+    "date_posted": "2026-11-14T12:44:39",
+    "locations_derived": [
+      "Los Angeles, California, United States"
+    ],
+    "location_type": null,
+    "ai_work_arrangement": "Hybrid",
+    "ai_salary_min_value": 97000,
+    "ai_salary_max_value": 165000,
+    "ai_salary_value": null,
+    "ai_salary_unit_text": "YEAR",
+    "ai_salary_currency": "USD",
+    "ai_employment_type": [
+      "FULL_TIME"
+    ],
+    "source": "linkedin",
+    "description_text": "We anticipate the application window for this opening will close on - 16 Nov 2026\n\nAt MiniMed, you can begin a lifelong career of exploration and innovation, while helping make a difference in the lives of people living with diabetes around the globe. You'll lead with purpose, breaking down barriers"
+  }
+]

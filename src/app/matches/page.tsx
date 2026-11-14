@@ -2,6 +2,7 @@ import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { getCoverLetters } from "@/lib/ai/cover-letter";
 import { listMatches } from "@/lib/ai/match-agent";
+import { linkedInEnabled } from "@/lib/jobs/linkedin-api";
 import { SORT_KEYS, parseSortKey, sortMatches, type SortKey } from "@/lib/jobs/sort";
 import { getSavedIds } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
@@ -44,9 +45,9 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
           Based on <span className="font-medium">{resume.filename}</span>, targeting {resume.profile.targetTitles.slice(0, 3).join(", ")}.
         </p>
       </div>
-      <RunMatch defaultLocation={resume.profile.locations[0] ?? ""} />
+      <RunMatch defaultLocation={resume.profile.locations[0] ?? ""} linkedinApi={linkedInEnabled()} />
       {matches.length > 1 && (
-        <nav className="flex items-center gap-3 text-sm">
+        <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="text-zinc-500">Sort by:</span>
           {SORT_KEYS.map((k) => (
             <Link
@@ -63,12 +64,12 @@ export default async function MatchesPage({ searchParams }: { searchParams: Prom
       {matches.map((m) => (
         <JobCard key={m.jobId} job={m.job} saved={saved.has(m.jobId)}>
           <div className="space-y-1 rounded bg-zinc-50 p-3 text-sm">
-            <div className="flex items-center gap-2">
-              <span className={`rounded px-2 py-0.5 text-xs font-semibold ${scoreClass(m.score)}`}>{m.score}% match</span>
-              <span className="text-zinc-700">{m.reason}</span>
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-2">
+              <span className={`self-start shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${scoreClass(m.score)}`}>{m.score}% match</span>
+              <span className="wrap-break-word text-zinc-700">{m.reason}</span>
             </div>
-            {m.matchedSkills.length > 0 && <p className="text-xs text-green-700">✓ {m.matchedSkills.join(", ")}</p>}
-            {m.gaps.length > 0 && <p className="text-xs text-amber-700">Gaps: {m.gaps.join(", ")}</p>}
+            {m.matchedSkills.length > 0 && <p className="wrap-break-word text-xs text-green-700">✓ {m.matchedSkills.join(", ")}</p>}
+            {m.gaps.length > 0 && <p className="wrap-break-word text-xs text-amber-700">Gaps: {m.gaps.join(", ")}</p>}
           </div>
           <CoverLetter jobId={m.jobId} initial={letters.get(m.jobId) ?? null} />
         </JobCard>
