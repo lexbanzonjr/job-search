@@ -11,9 +11,23 @@ export const profileSchema = z.object({
   seniority: z.enum(["intern", "junior", "mid", "senior", "lead", "principal", "executive"]),
   locations: z.array(z.string()).describe("Locations mentioned or implied as current/preferred"),
   industries: z.array(z.string()),
+  experience: z
+    .array(
+      z.object({
+        title: z.string(),
+        company: z.string(),
+        location: z.string().describe("City/region or 'Remote', or empty string"),
+        startDate: z.string().describe("e.g. 'Jan 2020' or '2020'"),
+        endDate: z.string().describe("'Present' if current role"),
+        highlights: z.array(z.string()).describe("2-5 concise accomplishments"),
+      }),
+    )
+    .default([])
+    .describe("Work history roles, most recent first"),
 });
 
 export type ResumeProfile = z.infer<typeof profileSchema>;
+export type ExperienceEntry = ResumeProfile["experience"][number];
 
 export async function extractProfile(resumeText: string): Promise<ResumeProfile> {
   const { output } = await generateText({

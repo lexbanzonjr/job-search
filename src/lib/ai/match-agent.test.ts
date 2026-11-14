@@ -18,6 +18,7 @@ const profile: ResumeProfile = {
   seniority: "senior",
   locations: ["Anaheim, CA"],
   industries: [],
+  experience: [],
 };
 
 let nextId = 1;
