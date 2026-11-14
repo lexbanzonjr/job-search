@@ -1,8 +1,6 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { afterAll, describe, expect, it, vi } from "vitest";
-import { openDb } from "@/lib/db";
+import { describe, expect, it, vi } from "vitest";
+import { openTestDb } from "@/lib/db";
+import { insertResume } from "@/lib/resume/store";
 import { upsertJobs } from "@/lib/jobs/store";
 import type { StoredJob } from "@/lib/jobs/types";
 import {
@@ -100,21 +98,16 @@ describe("runMatchAgent", () => {
 });
 
 describe("saveMatches / listMatches", () => {
-  const dir = mkdtempSync(path.join(tmpdir(), "job-search-match-"));
-  const db = openDb(dir);
-  afterAll(() => {
-    db.close();
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("replaces previous matches for the resume and reads them back ranked", () => {
-    const [id1, id2] = upsertJobs([job("A"), job("B")], db);
-    const { id: resumeId } = db.prepare("INSERT INTO resumes (filename, text) VALUES ('r', 't') RETURNING id").get() as { id: number };
+  it("replaces previous matches for the resume and reads them back ranked", async () => {
+    const db = await openTestDb();
+    const [id1, id2] = await upsertJobs([job("A"), job("B")], db);
+    const resumeId = await insertResume(1, "r", "t", null, db);
     const result = (jobId: number, score: number) => ({ jobId, score, matchedSkills: ["x"], gaps: [], reason: "r", job: job("tmp") });
-    saveMatches(resumeId, [result(id1, 10)], db);
-    saveMatches(resumeId, [result(id1, 40), result(id2, 90)], db);
-    const rows = listMatches(resumeId, db);
+    await saveMatches(resumeId, [result(id1, 10)], db);
+    await saveMatches(resumeId, [result(id1, 40), result(id2, 90)], db);
+    const rows = await listMatches(resumeId, db);
     expect(rows.map((r) => [r.jobId, r.score])).toEqual([[id2, 90], [id1, 40]]);
     expect(rows[0]).toMatchObject({ matchedSkills: ["x"], reason: "r", job: { title: "B" } });
+    db.close();
   });
 });

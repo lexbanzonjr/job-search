@@ -4,19 +4,21 @@ import { revalidatePath } from "next/cache";
 import { extractProfile, profileSchema } from "@/lib/ai/profile";
 import { extractResumeText } from "@/lib/resume/parse";
 import { getLatestResume, insertResume, updateProfile } from "@/lib/resume/store";
+import { requireUser } from "@/lib/session";
 
 export type ActionState = { error?: string; ok?: string } | null;
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 export async function uploadResumeAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const user = await requireUser();
   const file = formData.get("resume");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a resume file first." };
   try {
     const text = await extractResumeText(Buffer.from(await file.arrayBuffer()), file.name, file.type);
-    const id = insertResume(file.name, text, null);
+    const id = await insertResume(user.id, file.name, text, null);
     try {
-      updateProfile(id, await extractProfile(text));
+      await updateProfile(user.id, id, await extractProfile(text));
     } catch (e) {
       revalidatePath("/resume");
       return { error: `Resume saved, but the AI profile failed: ${errMsg(e)}` };
@@ -32,7 +34,8 @@ const list = (v: FormDataEntryValue | null) =>
   String(v ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
 export async function saveProfileAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const resume = getLatestResume();
+  const user = await requireUser();
+  const resume = await getLatestResume(user.id);
   if (!resume) return { error: "Upload a resume first." };
   const parsed = profileSchema.safeParse({
     name: String(formData.get("name") ?? ""),
@@ -45,17 +48,18 @@ export async function saveProfileAction(_prev: ActionState, formData: FormData):
     industries: list(formData.get("industries")),
   });
   if (!parsed.success) return { error: "Invalid profile: " + parsed.error.issues.map((i) => i.path.join(".")).join(", ") };
-  updateProfile(resume.id, parsed.data);
+  await updateProfile(user.id, resume.id, parsed.data);
   revalidatePath("/resume");
   return { ok: "Profile saved." };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function reanalyzeAction(_prev: ActionState): Promise<ActionState> {
-  const resume = getLatestResume();
+  const user = await requireUser();
+  const resume = await getLatestResume(user.id);
   if (!resume) return { error: "Upload a resume first." };
   try {
-    updateProfile(resume.id, await extractProfile(resume.text));
+    await updateProfile(user.id, resume.id, await extractProfile(resume.text));
     revalidatePath("/resume");
     return { ok: "Profile regenerated." };
   } catch (e) {

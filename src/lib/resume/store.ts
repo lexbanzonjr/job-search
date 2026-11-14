@@ -1,5 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
-import { getDb } from "@/lib/db";
+import { one, dbOr, type Db } from "@/lib/db";
 import type { ResumeProfile } from "@/lib/ai/profile";
 
 export interface Resume {
@@ -19,25 +18,30 @@ interface Row {
 }
 
 const toResume = (r: Row): Resume => ({
-  id: r.id,
+  id: Number(r.id),
   filename: r.filename,
   text: r.text,
   profile: r.profile_json ? JSON.parse(r.profile_json) : null,
   createdAt: r.created_at,
 });
 
-export function getLatestResume(db: DatabaseSync = getDb()): Resume | null {
-  const row = db.prepare("SELECT * FROM resumes ORDER BY id DESC LIMIT 1").get() as Row | undefined;
+export async function getLatestResume(userId: number, db?: Db): Promise<Resume | null> {
+  const row = await one<Row>(await dbOr(db), "SELECT * FROM resumes WHERE user_id = ? ORDER BY id DESC LIMIT 1", [userId]);
   return row ? toResume(row) : null;
 }
 
-export function insertResume(filename: string, text: string, profile: ResumeProfile | null, db: DatabaseSync = getDb()): number {
-  const r = db
-    .prepare("INSERT INTO resumes (filename, text, profile_json) VALUES (?, ?, ?) RETURNING id")
-    .get(filename, text, profile ? JSON.stringify(profile) : null) as { id: number };
-  return r.id;
+export async function insertResume(userId: number, filename: string, text: string, profile: ResumeProfile | null, db?: Db): Promise<number> {
+  const r = await one<{ id: number }>(
+    await dbOr(db),
+    "INSERT INTO resumes (user_id, filename, text, profile_json) VALUES (?, ?, ?, ?) RETURNING id",
+    [userId, filename, text, profile ? JSON.stringify(profile) : null],
+  );
+  return Number(r!.id);
 }
 
-export function updateProfile(id: number, profile: ResumeProfile, db: DatabaseSync = getDb()) {
-  db.prepare("UPDATE resumes SET profile_json = ? WHERE id = ?").run(JSON.stringify(profile), id);
+export async function updateProfile(userId: number, id: number, profile: ResumeProfile, db?: Db) {
+  await (await dbOr(db)).execute({
+    sql: "UPDATE resumes SET profile_json = ? WHERE id = ? AND user_id = ?",
+    args: [JSON.stringify(profile), id, userId],
+  });
 }

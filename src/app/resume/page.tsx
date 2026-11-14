@@ -1,10 +1,12 @@
 import { getLatestResume } from "@/lib/resume/store";
+import { requireUser } from "@/lib/session";
 import { ProfileForm, UploadForm } from "./ResumeForms";
 
 export const dynamic = "force-dynamic";
 
-export default function ResumePage() {
-  const resume = getLatestResume();
+export default async function ResumePage() {
+  const user = await requireUser();
+  const resume = await getLatestResume(user.id);
   return (
     <main className="space-y-4">
       <h1 className="text-xl font-semibold">Resume</h1>

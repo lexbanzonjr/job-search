@@ -3,6 +3,7 @@ import { JobCard } from "@/components/JobCard";
 import { listMatches } from "@/lib/ai/match-agent";
 import { getSavedIds } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
+import { requireUser } from "@/lib/session";
 import { RunMatch } from "./RunMatch";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,9 @@ function scoreClass(score: number) {
   return "bg-zinc-100 text-zinc-600";
 }
 
-export default function MatchesPage() {
-  const resume = getLatestResume();
+export default async function MatchesPage() {
+  const user = await requireUser();
+  const resume = await getLatestResume(user.id);
   if (!resume?.profile) {
     return (
       <main className="card text-sm">
@@ -24,8 +26,7 @@ export default function MatchesPage() {
       </main>
     );
   }
-  const matches = listMatches(resume.id);
-  const saved = getSavedIds();
+  const [matches, saved] = await Promise.all([listMatches(resume.id), getSavedIds(user.id)]);
 
   return (
     <main className="space-y-4">

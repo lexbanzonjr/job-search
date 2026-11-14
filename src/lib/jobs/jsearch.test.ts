@@ -1,8 +1,5 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
-import { openDb } from "@/lib/db";
+import { openTestDb } from "@/lib/db";
 import { buildQueryString, decodeEntities, fetchJSearch, isLinkedInJob, normalizeJob, type JSearchItem } from "./jsearch";
 import { cacheKey, searchJobs } from "./store";
 
@@ -117,15 +114,10 @@ describe("fetchJSearch", () => {
 });
 
 describe("searchJobs cache", () => {
-  const dir = mkdtempSync(path.join(tmpdir(), "job-search-cache-"));
-  const db = openDb(dir);
-  afterAll(() => {
-    db.close();
-    rmSync(dir, { recursive: true, force: true });
-    vi.unstubAllGlobals();
-  });
+  afterAll(() => vi.unstubAllGlobals());
 
   it("calls the API once per parameter set within the TTL", async () => {
+    const db = await openTestDb();
     process.env.RAPIDAPI_KEY = "k";
     const fetchMock = vi.fn(async () => Response.json({ data: { jobs: [linkedin, indeedOnly], cursor: "c2" } }));
     vi.stubGlobal("fetch", fetchMock);

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import Link from "next/link";
-import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { getUser } from "@/lib/session";
 import { logout } from "./login/actions";
 import "./globals.css";
 
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const user = verifySession((await cookies()).get(SESSION_COOKIE)?.value);
+  const user = await getUser();
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full">
@@ -23,7 +22,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/matches" className="text-zinc-600 hover:text-zinc-900">AI Matches</Link>
               <Link href="/resume" className="text-zinc-600 hover:text-zinc-900">Resume</Link>
               <Link href="/saved" className="text-zinc-600 hover:text-zinc-900">Saved</Link>
-              <form action={logout} className="ml-auto">
+              {user.isAdmin && <Link href="/users" className="text-zinc-600 hover:text-zinc-900">Users</Link>}
+              <span className="ml-auto text-zinc-400">{user.username}</span>
+              <form action={logout}>
                 <button className="text-zinc-500 hover:text-zinc-900">Sign out</button>
               </form>
             </nav>

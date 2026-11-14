@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { checkCredentials, signSession, verifySession, SESSION_MAX_AGE } from "./auth";
+import { describe, expect, it } from "vitest";
+import { signSession, verifySession, SESSION_MAX_AGE } from "./auth";
 
 const KEY = "test-secret";
 
@@ -26,24 +26,5 @@ describe("session tokens", () => {
   it("rejects missing or malformed tokens", () => {
     expect(verifySession(undefined, Date.now(), KEY)).toBeNull();
     expect(verifySession("garbage", Date.now(), KEY)).toBeNull();
-  });
-});
-
-describe("checkCredentials", () => {
-  afterEach(() => {
-    delete process.env.AUTH_USERNAME;
-    delete process.env.AUTH_PASSWORD;
-  });
-
-  it("accepts the configured user and rejects others", () => {
-    process.env.AUTH_USERNAME = "admin";
-    process.env.AUTH_PASSWORD = "pw";
-    expect(checkCredentials("admin", "pw")).toBe(true);
-    expect(checkCredentials("admin", "nope")).toBe(false);
-    expect(checkCredentials("other", "pw")).toBe(false);
-  });
-
-  it("rejects everything when not configured", () => {
-    expect(checkCredentials("", "")).toBe(false);
   });
 });
