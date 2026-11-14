@@ -14,7 +14,7 @@ export async function login(_prev: string | null, formData: FormData): Promise<s
   (await cookies()).set(SESSION_COOKIE, signSession(user.username), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.COOKIE_SECURE === "true",
+    secure: process.env.COOKIE_SECURE === "true" || !!process.env.VERCEL,
     path: "/",
     maxAge: SESSION_MAX_AGE,
   });

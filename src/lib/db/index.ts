@@ -132,6 +132,10 @@ const g = globalThis as unknown as { __jobSearchDb?: Promise<Db> };
 
 export function getDb(): Promise<Db> {
   if (!g.__jobSearchDb) {
+    if (process.env.VERCEL && !process.env.TURSO_DATABASE_URL) {
+      // Vercel's filesystem is ephemeral; a local file DB would silently lose data.
+      return Promise.reject(new Error("TURSO_DATABASE_URL is not set. Add the Turso database URL and token to the Vercel project."));
+    }
     const url =
       process.env.TURSO_DATABASE_URL ||
       `file:${path.join(process.env.DATA_DIR || path.join(process.cwd(), "data"), "job-search.db").replace(/\\/g, "/")}`;
