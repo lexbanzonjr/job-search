@@ -96,6 +96,24 @@ const MIGRATIONS: string[] = [
      key TEXT PRIMARY KEY,
      value TEXT NOT NULL
    );`,
+  // AI reviews of the user's GitHub commits, suggested as resume bullets.
+  `CREATE TABLE commit_reviews (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     user_id INTEGER NOT NULL,
+     repo TEXT NOT NULL,
+     sha TEXT NOT NULL,
+     committed_at TEXT,
+     message TEXT NOT NULL,
+     what TEXT,
+     why TEXT,
+     impact_score INTEGER,
+     resume_worthy INTEGER NOT NULL DEFAULT 0,
+     suggested_bullet TEXT,
+     target_experience_index INTEGER,
+     status TEXT NOT NULL DEFAULT 'pending',
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE (user_id, repo, sha)
+   );`,
 ];
 
 /**

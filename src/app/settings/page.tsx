@@ -26,6 +26,35 @@ export default async function SettingsPage() {
             </span>
           </span>
         </label>
+
+        <h2 className="pt-2 font-semibold">GitHub</h2>
+        <p className="text-sm text-zinc-500">
+          Used by the resume page to review your commits. Create a fine-grained token with read-only{" "}
+          <span className="font-medium">Contents</span> and <span className="font-medium">Metadata</span> access on the
+          repos you want scanned.
+        </p>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium">Token</span>
+          <input
+            type="password"
+            name="githubToken"
+            autoComplete="off"
+            placeholder={settings.githubTokenSet ? "Leave blank to keep the saved token" : "github_pat_…"}
+            className="input w-full"
+          />
+          <span className="block text-zinc-500">{settings.githubTokenSet ? "Token saved." : "No token."}</span>
+        </label>
+        {settings.githubTokenSet && (
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name="clearGithubToken" value="1" />
+            Remove token
+          </label>
+        )}
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium">Username</span>
+          <input name="githubLogin" defaultValue={settings.githubLogin} placeholder="your-github-login" className="input w-full" />
+          <span className="block text-zinc-500">Optional. Looked up from the token if blank.</span>
+        </label>
         <button className="btn">Save</button>
       </form>
     </main>
