@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import type { ResumeProfile } from "@/lib/ai/profile";
 import { reanalyzeAction, saveProfileAction, uploadResumeAction, type ActionState } from "./actions";
 
@@ -38,6 +38,15 @@ export function UploadForm({ hasResume }: { hasResume: boolean }) {
   );
 }
 
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3 border-t border-zinc-200 pt-4 first:border-t-0 first:pt-0">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 const SENIORITY = ["intern", "junior", "mid", "senior", "lead", "principal", "executive"] as const;
 
 export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
@@ -53,27 +62,33 @@ export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
 
   return (
     <div className="card space-y-3">
-      <h2 className="font-semibold">AI profile</h2>
+      <h2 className="font-semibold">Profile</h2>
       {!p && <p className="text-sm text-zinc-500">No profile yet. Click Re-analyze above.</p>}
-      <form action={action} key={JSON.stringify(p)} className="space-y-3">
-        {field("Name", "name", p?.name ?? "")}
-        <label className="block space-y-1 text-sm">
-          <span className="font-medium">Summary</span>
-          <textarea name="summary" defaultValue={p?.summary ?? ""} rows={3} className="input" />
-        </label>
-        {field("Target titles", "targetTitles", p?.targetTitles.join(", ") ?? "", "comma-separated; drives AI search queries")}
-        {field("Skills", "skills", p?.skills.join(", ") ?? "", "comma-separated")}
-        <div className="grid grid-cols-2 gap-3">
-          {field("Years of experience", "yearsExperience", String(p?.yearsExperience ?? 0))}
+      <form action={action} key={JSON.stringify(p)} className="space-y-5">
+        <Section title="Basics">
+          {field("Name", "name", p?.name ?? "")}
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Seniority</span>
-            <select name="seniority" defaultValue={p?.seniority ?? "mid"} className="input">
-              {SENIORITY.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            <span className="font-medium">Summary</span>
+            <textarea name="summary" defaultValue={p?.summary ?? ""} rows={3} className="input" />
           </label>
-        </div>
-        {field("Locations", "locations", p?.locations.join(", ") ?? "", "comma-separated")}
-        {field("Industries", "industries", p?.industries.join(", ") ?? "", "comma-separated")}
+          <div className="grid grid-cols-2 gap-3">
+            {field("Years of experience", "yearsExperience", String(p?.yearsExperience ?? 0))}
+            <label className="block space-y-1 text-sm">
+              <span className="font-medium">Seniority</span>
+              <select name="seniority" defaultValue={p?.seniority ?? "mid"} className="input">
+                {SENIORITY.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </label>
+          </div>
+        </Section>
+        <Section title="Targeting">
+          {field("Target titles", "targetTitles", p?.targetTitles.join(", ") ?? "", "comma-separated; drives AI search queries")}
+          {field("Locations", "locations", p?.locations.join(", ") ?? "", "comma-separated")}
+          {field("Industries", "industries", p?.industries.join(", ") ?? "", "comma-separated")}
+        </Section>
+        <Section title="Skills">
+          {field("Skills", "skills", p?.skills.join(", ") ?? "", "comma-separated")}
+        </Section>
         <button disabled={pending} className="btn">{pending ? "Saving…" : "Save profile"}</button>
         <Status state={state} />
       </form>
