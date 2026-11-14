@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { getSavedIds, searchJobs } from "@/lib/jobs/store";
+import { requireUser } from "@/lib/session";
 import type { DatePosted, EmploymentType, SearchParams, StoredJob } from "@/lib/jobs/types";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ function parseParams(q: Query): SearchParams {
 }
 
 export default async function SearchPage({ searchParams }: PageProps<"/">) {
+  const user = await requireUser();
   const q = await searchParams;
   const p = parseParams(q);
   // LinkedIn-only is on by default for a fresh form.
@@ -36,7 +38,7 @@ export default async function SearchPage({ searchParams }: PageProps<"/">) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
-  const saved = getSavedIds();
+  const saved = await getSavedIds(user.id);
   const nextHref = (cursor: string) => `/?${new URLSearchParams({ ...(q as Record<string, string>), cursor })}`;
 
   return (

@@ -1,7 +1,6 @@
-import type { DatabaseSync } from "node:sqlite";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { getDb } from "@/lib/db";
+import { all, dbOr, type Db } from "@/lib/db";
 import { getJobsByIds } from "@/lib/jobs/store";
 import type { SearchParams, StoredJob } from "@/lib/jobs/types";
 import { getModel } from "./model";
@@ -209,28 +208,29 @@ export const llmDeps = (search: AgentDeps["search"]): AgentDeps => ({
 
 // ---------- persistence ----------
 
-export function saveMatches(resumeId: number, results: MatchResult[], db: DatabaseSync = getDb()) {
-  db.exec("BEGIN");
-  try {
-    db.prepare("DELETE FROM matches WHERE resume_id = ?").run(resumeId);
-    const stmt = db.prepare("INSERT INTO matches (resume_id, job_id, score, reasons_json) VALUES (?, ?, ?, ?)");
-    for (const r of results) {
-      stmt.run(resumeId, r.jobId, r.score, JSON.stringify({ matchedSkills: r.matchedSkills, gaps: r.gaps, reason: r.reason }));
-    }
-    db.exec("COMMIT");
-  } catch (e) {
-    db.exec("ROLLBACK");
-    throw e;
-  }
+export async function saveMatches(resumeId: number, results: MatchResult[], db?: Db) {
+  await (await dbOr(db)).batch(
+    [
+      { sql: "DELETE FROM matches WHERE resume_id = ?", args: [resumeId] },
+      ...results.map((r) => ({
+        sql: "INSERT INTO matches (resume_id, job_id, score, reasons_json) VALUES (?, ?, ?, ?)",
+        args: [resumeId, r.jobId, r.score, JSON.stringify({ matchedSkills: r.matchedSkills, gaps: r.gaps, reason: r.reason })],
+      })),
+    ],
+    "write",
+  );
 }
 
-export function listMatches(resumeId: number, db: DatabaseSync = getDb()): MatchResult[] {
-  const rows = db
-    .prepare("SELECT job_id, score, reasons_json FROM matches WHERE resume_id = ? ORDER BY score DESC")
-    .all(resumeId) as { job_id: number; score: number; reasons_json: string }[];
-  const jobs = new Map(getJobsByIds(rows.map((r) => r.job_id), db).map((j) => [j.id, j]));
+export async function listMatches(resumeId: number, db?: Db): Promise<MatchResult[]> {
+  const c = await dbOr(db);
+  const rows = await all<{ job_id: number; score: number; reasons_json: string }>(
+    c,
+    "SELECT job_id, score, reasons_json FROM matches WHERE resume_id = ? ORDER BY score DESC",
+    [resumeId],
+  );
+  const jobs = new Map((await getJobsByIds(rows.map((r) => Number(r.job_id)), c)).map((j) => [j.id, j]));
   return rows.flatMap((r) => {
-    const job = jobs.get(r.job_id);
-    return job ? [{ jobId: r.job_id, score: r.score, ...JSON.parse(r.reasons_json), job }] : [];
+    const job = jobs.get(Number(r.job_id));
+    return job ? [{ jobId: Number(r.job_id), score: Number(r.score), ...JSON.parse(r.reasons_json), job }] : [];
   });
 }

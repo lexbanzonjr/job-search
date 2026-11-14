@@ -1,12 +1,14 @@
 import { JobCard } from "@/components/JobCard";
 import { listSaved } from "@/lib/jobs/store";
 import { SAVED_STATUSES } from "@/lib/jobs/types";
+import { requireUser } from "@/lib/session";
 import { updateSavedAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-export default function SavedPage() {
-  const jobs = listSaved();
+export default async function SavedPage() {
+  const user = await requireUser();
+  const jobs = await listSaved(user.id);
   return (
     <main className="space-y-4">
       <h1 className="text-xl font-semibold">Saved jobs ({jobs.length})</h1>

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["unpdf", "mammoth"],
+  serverExternalPackages: ["unpdf", "mammoth", "@libsql/client"],
   experimental: {
     serverActions: { bodySizeLimit: "10mb" },
   },

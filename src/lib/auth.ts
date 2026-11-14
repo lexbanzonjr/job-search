@@ -35,10 +35,3 @@ export function verifySession(token: string | undefined, now = Date.now(), key =
   if (Number(exp) * 1000 < now) return null;
   return Buffer.from(user, "base64url").toString();
 }
-
-export function checkCredentials(username: string, password: string): boolean {
-  const u = process.env.AUTH_USERNAME ?? "";
-  const p = process.env.AUTH_PASSWORD ?? "";
-  if (!u || !p) return false;
-  return safeEqual(username, u) && safeEqual(password, p);
-}

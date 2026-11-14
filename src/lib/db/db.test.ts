@@ -1,33 +1,25 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { migrate, openDb } from "./index";
+import { all, migrate, one, openTestDb, schemaVersion } from "./index";
 
-const dir = mkdtempSync(path.join(tmpdir(), "job-search-db-"));
-const db = openDb(dir);
-
-afterAll(() => {
-  db.close();
-  rmSync(dir, { recursive: true, force: true });
-});
+const db = await openTestDb();
+afterAll(() => db.close());
 
 describe("migrations", () => {
-  it("creates all tables", () => {
-    const names = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map((r) => r.name);
-    expect(names).toEqual(expect.arrayContaining(["resumes", "jobs", "searches", "matches", "saved_jobs"]));
+  it("creates all tables", async () => {
+    const names = (await all<{ name: string }>(db, "SELECT name FROM sqlite_master WHERE type='table'")).map((r) => r.name);
+    expect(names).toEqual(expect.arrayContaining(["resumes", "jobs", "searches", "matches", "saved_jobs", "users"]));
   });
 
-  it("is idempotent", () => {
-    expect(() => migrate(db)).not.toThrow();
-    expect((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version).toBe(2);
+  it("is idempotent", async () => {
+    await expect(migrate(db)).resolves.toBeUndefined();
+    expect(Number((await one<{ version: number }>(db, "SELECT version FROM schema_version"))!.version)).toBe(schemaVersion());
   });
 
-  it("cascades deletes from jobs", () => {
-    db.prepare("INSERT INTO jobs (source_id, title) VALUES ('x', 'Dev')").run();
-    const { id } = db.prepare("SELECT id FROM jobs WHERE source_id='x'").get() as { id: number };
-    db.prepare("INSERT INTO saved_jobs (job_id) VALUES (?)").run(id);
-    db.prepare("DELETE FROM jobs WHERE id=?").run(id);
-    expect(db.prepare("SELECT COUNT(*) AS n FROM saved_jobs").get()).toEqual({ n: 0 });
+  it("cascades deletes from jobs", async () => {
+    await db.execute("INSERT INTO jobs (source_id, title) VALUES ('x', 'Dev')");
+    const { id } = (await one<{ id: number }>(db, "SELECT id FROM jobs WHERE source_id='x'"))!;
+    await db.execute({ sql: "INSERT INTO saved_jobs (user_id, job_id) VALUES (1, ?)", args: [id] });
+    await db.execute({ sql: "DELETE FROM jobs WHERE id=?", args: [id] });
+    expect(Number((await one<{ n: number }>(db, "SELECT COUNT(*) AS n FROM saved_jobs"))!.n)).toBe(0);
   });
 });
