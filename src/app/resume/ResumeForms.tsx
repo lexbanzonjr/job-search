@@ -87,7 +87,7 @@ export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
           {field("Industries", "industries", p?.industries.join(", ") ?? "", "comma-separated")}
         </Section>
         <Section title="Skills">
-          {field("Skills", "skills", p?.skills.join(", ") ?? "", "comma-separated")}
+          <SkillBadges initial={p?.skills ?? []} />
         </Section>
         <Section title="Experience">
           <ExperienceEditor initial={p?.experience ?? []} />
@@ -186,6 +186,57 @@ function ExperienceEditor({ initial }: { initial: ExperienceEntry[] }) {
       >
         + Add role
       </button>
+    </div>
+  );
+}
+
+function SkillBadges({ initial }: { initial: string[] }) {
+  const [skills, setSkills] = useState(initial);
+  const [draft, setDraft] = useState("");
+  const add = (raw: string) => {
+    const s = raw.trim();
+    if (s && !skills.some((x) => x.toLowerCase() === s.toLowerCase())) setSkills([...skills, s]);
+    setDraft("");
+  };
+
+  return (
+    <div className="space-y-2">
+      <input type="hidden" name="skills" value={skills.join(", ")} />
+      <div className="flex flex-wrap gap-1.5">
+        {skills.length === 0 && <span className="text-sm text-zinc-500">No skills yet.</span>}
+        {skills.map((s) => (
+          <span key={s} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+            {s}
+            <button
+              type="button"
+              aria-label={`Remove ${s}`}
+              className="text-blue-400 hover:text-blue-700"
+              onClick={() => setSkills(skills.filter((x) => x !== s))}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        value={draft}
+        placeholder="Add a skill and press Enter"
+        className="input"
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v.endsWith(",")) add(v.slice(0, -1));
+          else setDraft(v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            add(draft);
+          } else if (e.key === "Backspace" && !draft && skills.length) {
+            setSkills(skills.slice(0, -1));
+          }
+        }}
+        onBlur={() => draft && add(draft)}
+      />
     </div>
   );
 }
