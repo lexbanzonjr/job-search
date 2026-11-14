@@ -28,11 +28,44 @@ export default async function SettingsPage() {
         </label>
 
         <h2 className="pt-2 font-semibold">GitHub</h2>
-        <p className="text-sm text-zinc-500">
-          Used by the resume page to review your commits. Create a fine-grained token with read-only{" "}
-          <span className="font-medium">Contents</span> and <span className="font-medium">Metadata</span> access on the
-          repos you want scanned.
-        </p>
+        <p className="text-sm text-zinc-500">Used by the resume page to read your commits. The token only needs read access.</p>
+        <details open={!settings.githubTokenSet} className="rounded-md border border-zinc-200 p-3 text-sm">
+          <summary className="cursor-pointer font-medium">How to create a token</summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-zinc-600">
+            <li>
+              Open{" "}
+              <a
+                href="https://github.com/settings/personal-access-tokens/new"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-blue-600 underline"
+              >
+                GitHub → New fine-grained token
+              </a>
+              .
+            </li>
+            <li><span className="font-medium">Resource owner:</span> your account (or the org that owns the repos).</li>
+            <li><span className="font-medium">Expiration:</span> your choice. Paste a new token here when it expires.</li>
+            <li>
+              <span className="font-medium">Repository access:</span> &ldquo;All repositories&rdquo;, or &ldquo;Only select
+              repositories&rdquo; for just the ones you want scanned.
+            </li>
+            <li>
+              <span className="font-medium">Repository permissions:</span> set <span className="font-medium">Contents</span> to{" "}
+              <span className="font-medium">Read-only</span>. <span className="font-medium">Metadata: Read-only</span> is added
+              automatically. Leave everything else at &ldquo;No access&rdquo;.
+            </li>
+            <li><span className="font-medium">Account permissions:</span> none needed.</li>
+            <li>
+              Click <span className="font-medium">Generate token</span>, copy it (it starts with <code>github_pat_</code>), and
+              paste it below.
+            </li>
+          </ol>
+          <p className="mt-2 text-zinc-500">
+            Using a classic token instead? Tick the <code>repo</code> scope for private repos, or no scopes for public repos
+            only. Fine-grained is safer because it can be read-only.
+          </p>
+        </details>
         <label className="block space-y-1 text-sm">
           <span className="font-medium">Token</span>
           <input
