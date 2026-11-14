@@ -1,5 +1,7 @@
 /** Minimal GitHub REST client for reading the user's own commits. */
 
+import { getGitHubConfig } from "@/lib/settings";
+
 const API = "https://api.github.com";
 export const MAX_PATCH_CHARS = 12_000;
 
@@ -9,16 +11,16 @@ export type CommitDetail = CommitSummary & { additions: number; deletions: numbe
 
 type Fetch = typeof fetch;
 
-function token(): string {
-  const t = process.env.GITHUB_TOKEN;
-  if (!t) throw new Error("GITHUB_TOKEN is not set.");
+async function token(): Promise<string> {
+  const t = (await getGitHubConfig()).token;
+  if (!t) throw new Error("No GitHub token. Add one on Settings.");
   return t;
 }
 
 async function gh<T>(pathAndQuery: string, f: Fetch = fetch): Promise<T> {
   const res = await f(`${API}${pathAndQuery}`, {
     headers: {
-      Authorization: `Bearer ${token()}`,
+      Authorization: `Bearer ${await token()}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     },
@@ -45,7 +47,8 @@ export function isNoiseCommit(message: string, files?: CommitFile[]): boolean {
 }
 
 export async function getLogin(f?: Fetch): Promise<string> {
-  if (process.env.GITHUB_LOGIN) return process.env.GITHUB_LOGIN;
+  const login = (await getGitHubConfig()).login;
+  if (login) return login;
   return (await gh<{ login: string }>("/user", f)).login;
 }
 
