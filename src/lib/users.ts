@@ -105,6 +105,7 @@ export async function deleteUser(id: number, db?: Db) {
       { sql: "DELETE FROM matches WHERE resume_id IN (SELECT id FROM resumes WHERE user_id = ?)", args: [id] },
       { sql: "DELETE FROM resumes WHERE user_id = ?", args: [id] },
       { sql: "DELETE FROM saved_jobs WHERE user_id = ?", args: [id] },
+      { sql: "DELETE FROM cover_letters WHERE user_id = ?", args: [id] },
       { sql: "DELETE FROM users WHERE id = ?", args: [id] },
     ],
     "write",

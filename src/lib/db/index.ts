@@ -83,6 +83,14 @@ const MIGRATIONS: string[] = [
      count INTEGER NOT NULL DEFAULT 0,
      PRIMARY KEY (user_id, day, kind)
    );`,
+  `CREATE TABLE cover_letters (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     user_id INTEGER NOT NULL,
+     job_id INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+     text TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     UNIQUE (user_id, job_id)
+   );`,
 ];
 
 /**

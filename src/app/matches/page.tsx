@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
+import { getCoverLetters } from "@/lib/ai/cover-letter";
 import { listMatches } from "@/lib/ai/match-agent";
 import { getSavedIds } from "@/lib/jobs/store";
 import { getLatestResume } from "@/lib/resume/store";
 import { requireUser } from "@/lib/session";
+import { CoverLetter } from "./CoverLetter";
 import { RunMatch } from "./RunMatch";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +29,7 @@ export default async function MatchesPage() {
     );
   }
   const [matches, saved] = await Promise.all([listMatches(resume.id), getSavedIds(user.id)]);
+  const letters = await getCoverLetters(user.id, matches.map((m) => m.jobId));
 
   return (
     <main className="space-y-4">
@@ -48,6 +51,7 @@ export default async function MatchesPage() {
             {m.matchedSkills.length > 0 && <p className="text-xs text-green-700">✓ {m.matchedSkills.join(", ")}</p>}
             {m.gaps.length > 0 && <p className="text-xs text-amber-700">Gaps: {m.gaps.join(", ")}</p>}
           </div>
+          <CoverLetter jobId={m.jobId} initial={letters.get(m.jobId) ?? null} />
         </JobCard>
       ))}
     </main>
