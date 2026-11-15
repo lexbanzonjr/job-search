@@ -1,5 +1,6 @@
 import { all, dbOr, one, type Db } from "@/lib/db";
 import type { CommitReview } from "@/lib/ai/commit-review";
+import type { ExperienceEntry, ProjectEntry, ResumeProfile } from "@/lib/ai/profile";
 import type { CommitSummary } from "@/lib/github/client";
 
 export type ReviewStatus = "pending" | "accepted" | "rejected";
@@ -15,7 +16,9 @@ export interface StoredReview {
   impactScore: number;
   resumeWorthy: boolean;
   bullet: string;
+  kind: "work" | "personal";
   experienceIndex: number;
+  projectIndex: number;
   status: ReviewStatus;
 }
 
@@ -30,7 +33,9 @@ interface Row {
   impact_score: number | null;
   resume_worthy: number;
   suggested_bullet: string | null;
+  suggested_kind: string | null;
   target_experience_index: number | null;
+  target_project_index: number | null;
   status: ReviewStatus;
 }
 
@@ -45,7 +50,9 @@ const toReview = (r: Row): StoredReview => ({
   impactScore: Number(r.impact_score ?? 0),
   resumeWorthy: Boolean(Number(r.resume_worthy)),
   bullet: r.suggested_bullet ?? "",
+  kind: r.suggested_kind === "personal" ? "personal" : "work",
   experienceIndex: Number(r.target_experience_index ?? -1),
+  projectIndex: Number(r.target_project_index ?? -1),
   status: r.status,
 });
 
@@ -74,13 +81,13 @@ export async function insertReviews(
     const res = await d.execute({
       sql: `INSERT INTO commit_reviews
               (user_id, repo, sha, committed_at, message, what, why, impact_score, resume_worthy,
-               suggested_bullet, target_experience_index, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               suggested_bullet, suggested_kind, target_experience_index, target_project_index, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (user_id, repo, sha) DO NOTHING`,
       args: [
         userId, c.repo, c.sha, c.committedAt, c.message,
         r?.what ?? null, r?.why ?? null, r?.impactScore ?? null, r?.resumeWorthy ? 1 : 0,
-        r?.bullet ?? null, r?.experienceIndex ?? null, status,
+        r?.bullet ?? null, r?.kind ?? null, r?.experienceIndex ?? null, r?.projectIndex ?? null, status,
       ],
     });
     if (r?.resumeWorthy) added += res.rowsAffected;
@@ -109,15 +116,57 @@ export async function setReviewStatus(userId: number, id: number, status: Review
   });
 }
 
-/** Return a copy of `profile` with `bullet` appended to experience[index].highlights. */
-export function addHighlight<P extends { experience: { highlights: string[] }[] }>(profile: P, index: number, bullet: string): P {
+/** Where an accepted bullet goes. */
+export type BulletTarget =
+  | { kind: "experience"; index: number }
+  | { kind: "newExperience"; entry: Omit<ExperienceEntry, "highlights"> }
+  | { kind: "project"; index: number }
+  | { kind: "newProject"; entry: Omit<ProjectEntry, "highlights"> };
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/** Sortable number for dates like "Jan 2020", "2020", or "Present" (unknown sorts last). */
+export function dateRank(s: string): number {
+  const t = s.trim().toLowerCase();
+  if (/^(present|current|now)$/.test(t)) return 999_999;
+  const year = t.match(/\b(19|20)\d{2}\b/);
+  if (!year) return -1;
+  const month = MONTHS.findIndex((m) => t.includes(m));
+  return Number(year[0]) * 100 + (month < 0 ? 0 : month + 1);
+}
+
+const inRange = (i: number, n: number) => Number.isInteger(i) && i >= 0 && i < n;
+
+const withBullet = <T extends { highlights: string[] }>(e: T, text: string): T =>
+  e.highlights.includes(text) ? e : { ...e, highlights: [...e.highlights, text] };
+
+/** Return a copy of `profile` with `bullet` added at `target`. */
+export function addBullet(profile: ResumeProfile, target: BulletTarget, bullet: string): ResumeProfile {
   const text = bullet.trim();
   if (!text) throw new Error("Bullet is empty.");
-  if (!Number.isInteger(index) || index < 0 || index >= profile.experience.length) throw new Error("Pick a role for this bullet.");
-  return {
-    ...profile,
-    experience: profile.experience.map((e, i) =>
-      i === index && !e.highlights.includes(text) ? { ...e, highlights: [...e.highlights, text] } : e,
-    ),
-  };
+  const experience = profile.experience;
+  const projects = profile.projects ?? [];
+  switch (target.kind) {
+    case "experience":
+      if (!inRange(target.index, experience.length)) throw new Error("Pick a role for this bullet.");
+      return { ...profile, experience: experience.map((e, i) => (i === target.index ? withBullet(e, text) : e)) };
+    case "project":
+      if (!inRange(target.index, projects.length)) throw new Error("Pick a project for this bullet.");
+      return { ...profile, projects: projects.map((p, i) => (i === target.index ? withBullet(p, text) : p)) };
+    case "newExperience": {
+      const entry = { ...target.entry, highlights: [text] };
+      if (!entry.title.trim() || !entry.company.trim()) throw new Error("A new role needs a title and company.");
+      // Keep most-recent-first: insert before the first role that started earlier.
+      const rank = dateRank(entry.startDate);
+      const at = experience.findIndex((e) => dateRank(e.startDate) < rank);
+      const next = [...experience];
+      next.splice(at < 0 ? next.length : at, 0, entry);
+      return { ...profile, experience: next };
+    }
+    case "newProject": {
+      const entry = { ...target.entry, highlights: [text] };
+      if (!entry.name.trim()) throw new Error("A new project needs a name.");
+      return { ...profile, projects: [...projects, entry] };
+    }
+  }
 }

@@ -29,6 +29,7 @@ export default async function ResumePage() {
   // Commit scanning uses the admin's GitHub token, so only the admin sees it.
   const git = user.isAdmin && resume?.profile ? { reviews: await listReviews(user.id), ...(await loadRepos()) } : null;
   const roles = (resume?.profile?.experience ?? []).map((e, index) => ({ index, label: `${e.title} · ${e.company}` }));
+  const projects = (resume?.profile?.projects ?? []).map((p, index) => ({ index, label: p.name || "Untitled project" }));
   return (
     <main className="space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -45,7 +46,9 @@ export default async function ResumePage() {
           </p>
           {/* Remount when the profile changes (e.g. a Git bullet was added) so the form isn't stale. */}
           <ProfileForm key={profileKey(resume.profile)} profile={resume.profile} />
-          {git && <GitCommitsPanel reviews={git.reviews} repos={git.repos} repoError={git.repoError} roles={roles} />}
+          {git && (
+            <GitCommitsPanel reviews={git.reviews} repos={git.repos} repoError={git.repoError} roles={roles} projects={projects} />
+          )}
           <details className="card">
             <summary className="cursor-pointer text-sm font-medium">Extracted text</summary>
             <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap text-xs text-zinc-700">{resume.text}</pre>

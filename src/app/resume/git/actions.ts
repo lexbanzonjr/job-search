@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isWorthReviewing, reviewCommits } from "@/lib/ai/commit-review";
 import { getCommitDetail, searchMyCommits } from "@/lib/github/client";
-import { addHighlight, getReview, insertReviews, knownShas, setReviewStatus } from "@/lib/resume/commit-store";
+import { addBullet, getReview, insertReviews, knownShas, setReviewStatus, type BulletTarget } from "@/lib/resume/commit-store";
 import { getLatestResume, updateProfile } from "@/lib/resume/store";
 import { requireAdmin } from "@/lib/session";
 
@@ -13,6 +13,31 @@ export type GitActionState = { error?: string; ok?: string } | null;
 const MAX_COMMITS_PER_SCAN = 50;
 
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
+
+/** Form `target` is "exp:<i>", "proj:<i>", "new-exp", or "new-proj" (with new* fields). */
+function parseTarget(f: FormData): BulletTarget {
+  const t = str(f, "target");
+  if (t === "new-exp") {
+    return {
+      kind: "newExperience",
+      entry: { title: str(f, "newTitle"), company: str(f, "newCompany"), location: str(f, "newLocation"), startDate: str(f, "newStart"), endDate: str(f, "newEnd") },
+    };
+  }
+  if (t === "new-proj") {
+    return {
+      kind: "newProject",
+      entry: {
+        name: str(f, "newName"), url: str(f, "newUrl"), startDate: str(f, "newStart"), endDate: str(f, "newEnd"),
+        tech: str(f, "newTech").split(",").map((s) => s.trim()).filter(Boolean),
+      },
+    };
+  }
+  const [kind, i] = t.split(":");
+  if (kind === "proj") return { kind: "project", index: Number(i) };
+  if (kind === "exp") return { kind: "experience", index: Number(i) };
+  throw new Error("Pick where this bullet goes.");
+}
 const REPO = /^[\w.-]+\/[\w.-]+$/;
 
 // GITHUB_TOKEN belongs to the admin, so only the admin can scan (and act on) their commits.
@@ -43,13 +68,12 @@ export async function acceptReviewAction(_prev: GitActionState, formData: FormDa
   const user = await requireAdmin();
   const id = Number(formData.get("id"));
   const bullet = String(formData.get("bullet") ?? "");
-  const index = Number(formData.get("experienceIndex"));
   const review = await getReview(user.id, id);
   if (!review || review.status !== "pending") return { error: "Suggestion not found." };
   const resume = await getLatestResume(user.id);
   if (!resume?.profile) return { error: "Upload a resume first." };
   try {
-    await updateProfile(user.id, resume.id, addHighlight(resume.profile, index, bullet));
+    await updateProfile(user.id, resume.id, addBullet(resume.profile, parseTarget(formData), bullet));
     await setReviewStatus(user.id, id, "accepted");
     revalidatePath("/resume");
     return { ok: "Added to your resume." };

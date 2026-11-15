@@ -1,24 +1,57 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { StoredReview } from "@/lib/resume/commit-store";
 import { acceptReviewAction, rejectReviewAction, scanCommitsAction, type GitActionState } from "./git/actions";
 
-type Role = { index: number; label: string };
+export type Choice = { index: number; label: string };
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2026-02-14T…" -> "Feb 2026". */
+export function monthYear(iso: string | null): string {
+  const m = iso?.match(/^(\d{4})-(\d{2})/);
+  return m ? `${MONTHS[Number(m[2]) - 1]} ${m[1]}` : "";
+}
+
+/** The AI's pick when it still exists, else a sensible default for work vs personal. */
+export function defaultTarget(review: StoredReview, roles: Choice[], projects: Choice[]): string {
+  if (review.kind === "personal") {
+    if (projects.some((p) => p.index === review.projectIndex)) return `proj:${review.projectIndex}`;
+    return "new-proj";
+  }
+  if (roles.some((r) => r.index === review.experienceIndex)) return `exp:${review.experienceIndex}`;
+  return roles.length ? `exp:${roles[0].index}` : "new-exp";
+}
 
 function Status({ state }: { state: GitActionState }) {
   if (!state) return null;
   return <p className={`text-sm ${state.error ? "text-red-600" : "text-green-700"}`}>{state.error ?? state.ok}</p>;
 }
 
-function Suggestion({ review, roles }: { review: StoredReview; roles: Role[] }) {
+function Field({ label, name, defaultValue, required, placeholder }: {
+  label: string; name: string; defaultValue?: string; required?: boolean; placeholder?: string;
+}) {
+  return (
+    <label className="block space-y-1 text-xs">
+      <span className="font-medium text-zinc-600">{label}</span>
+      <input name={name} defaultValue={defaultValue} required={required} placeholder={placeholder} className="input" />
+    </label>
+  );
+}
+
+function Suggestion({ review, roles, projects }: { review: StoredReview; roles: Choice[]; projects: Choice[] }) {
   const [state, accept, accepting] = useActionState(acceptReviewAction, null);
   const [rejState, reject, rejecting] = useActionState(rejectReviewAction, null);
-  const defaultRole = roles.some((r) => r.index === review.experienceIndex) ? review.experienceIndex : roles[0]?.index ?? -1;
+  const [target, setTarget] = useState(() => defaultTarget(review, roles, projects));
+  const date = monthYear(review.committedAt);
+  const repoName = review.repo.split("/")[1] ?? review.repo;
+
   return (
     <li className="space-y-2 border-t border-zinc-200 pt-3 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
         <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-700">Impact {review.impactScore}/5</span>
+        <span className="rounded bg-zinc-100 px-1.5 py-0.5">{review.kind === "personal" ? "Personal" : "Work"}</span>
         <span>{review.repo}</span>
         <code>{review.sha.slice(0, 7)}</code>
         {review.committedAt && <span>{review.committedAt.slice(0, 10)}</span>}
@@ -28,13 +61,47 @@ function Suggestion({ review, roles }: { review: StoredReview; roles: Role[] }) 
       <form action={accept} className="space-y-2">
         <input type="hidden" name="id" value={review.id} />
         <textarea name="bullet" defaultValue={review.bullet} rows={2} className="input w-full" />
-        <div className="flex flex-wrap items-center gap-2">
-          <select name="experienceIndex" defaultValue={defaultRole} className="input w-auto">
-            {roles.map((r) => (
-              <option key={r.index} value={r.index}>{r.label}</option>
-            ))}
+        <label className="block space-y-1 text-xs">
+          <span className="font-medium text-zinc-600">Add to</span>
+          <select name="target" value={target} onChange={(e) => setTarget(e.target.value)} className="input">
+            <optgroup label="Experience">
+              {roles.map((r) => (
+                <option key={r.index} value={`exp:${r.index}`}>{r.label}</option>
+              ))}
+              <option value="new-exp">+ New experience…</option>
+            </optgroup>
+            <optgroup label="Projects">
+              {projects.map((p) => (
+                <option key={p.index} value={`proj:${p.index}`}>{p.label}</option>
+              ))}
+              <option value="new-proj">+ New project…</option>
+            </optgroup>
           </select>
-          <button disabled={accepting || roles.length === 0} className="btn">{accepting ? "Adding…" : "Add to resume"}</button>
+        </label>
+        {target === "new-exp" && (
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-zinc-200 p-3">
+            <Field label="Title" name="newTitle" required />
+            <Field label="Company" name="newCompany" required />
+            <Field label="Location" name="newLocation" placeholder="City or Remote" />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Start" name="newStart" defaultValue={date} />
+              <Field label="End" name="newEnd" defaultValue="Present" />
+            </div>
+          </div>
+        )}
+        {target === "new-proj" && (
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-zinc-200 p-3">
+            <Field label="Name" name="newName" defaultValue={repoName} required />
+            <Field label="Link" name="newUrl" defaultValue={`https://github.com/${review.repo}`} />
+            <Field label="Tech (comma-separated)" name="newTech" placeholder="TypeScript, Next.js" />
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Start" name="newStart" defaultValue={date} />
+              <Field label="End" name="newEnd" defaultValue="Present" />
+            </div>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <button disabled={accepting} className="btn">{accepting ? "Adding…" : "Add to resume"}</button>
           <button formAction={reject} formNoValidate disabled={rejecting} className="btn-secondary">
             {rejecting ? "…" : "Dismiss"}
           </button>
@@ -46,9 +113,10 @@ function Suggestion({ review, roles }: { review: StoredReview; roles: Role[] }) 
   );
 }
 
-export function GitCommitsPanel({ reviews, roles, repos, repoError }: {
+export function GitCommitsPanel({ reviews, roles, projects, repos, repoError }: {
   reviews: StoredReview[];
-  roles: Role[];
+  roles: Choice[];
+  projects: Choice[];
   repos: string[];
   repoError?: string;
 }) {
@@ -85,13 +153,10 @@ export function GitCommitsPanel({ reviews, roles, repos, repoError }: {
         </form>
       )}
       <Status state={state} />
-      {roles.length === 0 && reviews.length > 0 && (
-        <p className="text-sm text-zinc-500">Add a work experience entry to your profile to place these bullets.</p>
-      )}
       {reviews.length > 0 ? (
         <ul className="space-y-3">
           {reviews.map((r) => (
-            <Suggestion key={r.id} review={r} roles={roles} />
+            <Suggestion key={r.id} review={r} roles={roles} projects={projects} />
           ))}
         </ul>
       ) : (

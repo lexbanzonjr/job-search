@@ -14,7 +14,9 @@ export const commitReviewSchema = z.object({
   impactScore: z.number().int().min(1).max(5).describe("1 = trivial, 5 = significant feature/architecture/performance work"),
   resumeWorthy: z.boolean().describe("true only if this shows skill or impact a hiring manager would care about"),
   bullet: z.string().describe("One resume bullet: strong action verb, what + result. No invented metrics. Empty if not resume-worthy"),
+  kind: z.enum(["work", "personal"]).describe("work if done for an employer in the experience list, personal for side/open-source projects"),
   experienceIndex: z.number().int().describe("Index into the experience list this work best belongs to, or -1 if none fits"),
+  projectIndex: z.number().int().describe("Index into the projects list this work belongs to, or -1 if none fits"),
 });
 
 export type CommitReview = z.infer<typeof commitReviewSchema>;
@@ -31,6 +33,7 @@ export function commitReviewPrompt(commits: CommitDetail[], profile: ResumeProfi
   const exp = (profile?.experience ?? [])
     .map((e, i) => `${i}. ${e.title} at ${e.company} (${e.startDate} - ${e.endDate})`)
     .join("\n");
+  const projects = (profile?.projects ?? []).map((p, i) => `${i}. ${p.name}${p.url ? ` (${p.url})` : ""}`).join("\n");
   const body = commits
     .map(
       (c) =>
@@ -38,7 +41,7 @@ export function commitReviewPrompt(commits: CommitDetail[], profile: ResumeProfi
         `<message>\n${c.message}\n</message>\n<diff>\n${c.patch}\n</diff>\n</commit>`,
     )
     .join("\n\n");
-  return `<experience>\n${exp || "(none)"}\n</experience>\n\n${body}`;
+  return `<experience>\n${exp || "(none)"}\n</experience>\n<projects>\n${projects || "(none)"}\n</projects>\n\n${body}`;
 }
 
 export async function reviewCommits(commits: CommitDetail[], profile: ResumeProfile | null): Promise<CommitReview[]> {
@@ -53,7 +56,10 @@ export async function reviewCommits(commits: CommitDetail[], profile: ResumeProf
         "Judge whether it is resume-worthy: features, architecture, performance, reliability, security, and tooling that others use count; " +
         "small fixes, renames, formatting, and config tweaks usually don't. " +
         "Write bullets in past tense with a strong action verb, focused on outcome. Never invent numbers or results not evident in the diff. " +
-        "Pick the experience entry whose dates and company best fit the commit date, or -1. Return one review per commit, using its sha.",
+        "Decide whether each commit is work (for an employer in the experience list) or personal (side, open-source, or hobby). " +
+        "A repo under the developer's own account whose name doesn't match an employer is likely personal. " +
+        "For work, pick the experience entry whose company and dates fit the commit date; for personal, pick the matching project or -1. " +
+        "Return one review per commit, using its sha.",
       prompt: commitReviewPrompt(batch, profile),
       output: Output.object({ schema: z.object({ reviews: z.array(commitReviewSchema) }) }),
     });
