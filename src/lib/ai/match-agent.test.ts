@@ -19,6 +19,7 @@ const profile: ResumeProfile = {
   locations: ["Anaheim, CA"],
   industries: [],
   experience: [],
+  projects: [],
 };
 
 let nextId = 1;

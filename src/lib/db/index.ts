@@ -114,6 +114,9 @@ const MIGRATIONS: string[] = [
      created_at TEXT NOT NULL DEFAULT (datetime('now')),
      UNIQUE (user_id, repo, sha)
    );`,
+  // Whether a commit looks like work or personal, and which project it fits.
+  `ALTER TABLE commit_reviews ADD COLUMN suggested_kind TEXT;
+   ALTER TABLE commit_reviews ADD COLUMN target_project_index INTEGER;`,
 ];
 
 /**

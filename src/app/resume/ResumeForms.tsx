@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, type ReactNode } from "react";
-import type { ExperienceEntry, ResumeProfile } from "@/lib/ai/profile";
+import type { ExperienceEntry, ProjectEntry, ResumeProfile } from "@/lib/ai/profile";
 import { reanalyzeAction, saveProfileAction, uploadResumeAction, type ActionState } from "./actions";
 
 function Status({ state }: { state: ActionState }) {
@@ -91,6 +91,9 @@ export function ProfileForm({ profile }: { profile: ResumeProfile | null }) {
         </Section>
         <Section title="Experience">
           <ExperienceEditor initial={p?.experience ?? []} />
+        </Section>
+        <Section title="Projects">
+          <ProjectEditor initial={p?.projects ?? []} />
         </Section>
         <button disabled={pending} className="btn">{pending ? "Saving…" : "Save profile"}</button>
         <Status state={state} />
@@ -185,6 +188,104 @@ function ExperienceEditor({ initial }: { initial: ExperienceEntry[] }) {
         }}
       >
         + Add role
+      </button>
+    </div>
+  );
+}
+
+const EMPTY_PROJECT: ProjectEntry = { name: "", url: "", tech: [], startDate: "", endDate: "", highlights: [] };
+type ProjectField = "name" | "url" | "startDate" | "endDate";
+
+function ProjectEditor({ initial }: { initial: ProjectEntry[] }) {
+  const [projects, setProjects] = useState(initial);
+  const [editing, setEditing] = useState(-1);
+  const update = (i: number, patch: Partial<ProjectEntry>) =>
+    setProjects((ps) => ps.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  const input = (i: number, key: ProjectField, label: string) => (
+    <label className="block space-y-1 text-xs">
+      <span className="font-medium text-zinc-600">{label}</span>
+      <input value={projects[i][key]} onChange={(e) => update(i, { [key]: e.target.value })} className="input" />
+    </label>
+  );
+
+  return (
+    <div className="space-y-3">
+      <input type="hidden" name="projects" value={JSON.stringify(projects)} />
+      {projects.length === 0 && <p className="text-sm text-zinc-500">No projects yet.</p>}
+      {projects.map((p, i) => (
+        <div key={i} className="rounded-md border border-zinc-200 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">
+                {p.name || "Untitled project"}
+                {p.url && <span className="font-normal text-zinc-500"> · {p.url}</span>}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {[p.tech.join(", "), [p.startDate, p.endDate].filter(Boolean).join(" – ")].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button type="button" className="btn-secondary" onClick={() => setEditing(editing === i ? -1 : i)}>
+                {editing === i ? "Done" : "Edit"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary text-red-600"
+                onClick={() => {
+                  setProjects((ps) => ps.filter((_, j) => j !== i));
+                  setEditing(-1);
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+          {editing === i ? (
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                {input(i, "name", "Name")}
+                {input(i, "url", "Link")}
+                <label className="block space-y-1 text-xs">
+                  <span className="font-medium text-zinc-600">Tech (comma-separated)</span>
+                  <input
+                    value={p.tech.join(", ")}
+                    onChange={(e) => update(i, { tech: e.target.value.split(",").map((s) => s.trimStart()) })}
+                    className="input"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {input(i, "startDate", "Start")}
+                  {input(i, "endDate", "End")}
+                </div>
+              </div>
+              <label className="block space-y-1 text-xs">
+                <span className="font-medium text-zinc-600">Highlights (one per line)</span>
+                <textarea
+                  rows={4}
+                  className="input"
+                  value={p.highlights.join("\n")}
+                  onChange={(e) => update(i, { highlights: e.target.value.split("\n") })}
+                />
+              </label>
+            </div>
+          ) : (
+            p.highlights.some((h) => h.trim()) && (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-700">
+                {p.highlights.filter((h) => h.trim()).map((h, k) => <li key={k}>{h}</li>)}
+              </ul>
+            )
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={() => {
+          setProjects((ps) => [...ps, EMPTY_PROJECT]);
+          setEditing(projects.length);
+        }}
+      >
+        + Add project
       </button>
     </div>
   );

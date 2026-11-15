@@ -18,16 +18,19 @@ describe("commit review", () => {
   it("includes experience and commits in the prompt", () => {
     const prompt = commitReviewPrompt([commit()], {
       experience: [{ title: "Engineer", company: "Acme", location: "", startDate: "2024", endDate: "Present", highlights: [] }],
+      projects: [{ name: "job-search", url: "https://github.com/me/job-search", tech: [], startDate: "", endDate: "", highlights: [] }],
     } as never);
     expect(prompt).toContain("0. Engineer at Acme (2024 - Present)");
     expect(prompt).toContain('sha="a"');
     expect(prompt).toContain("Add search");
+    expect(prompt).toContain("0. job-search (https://github.com/me/job-search)");
     expect(commitReviewPrompt([], null)).toContain("(none)");
   });
 
   it("validates review output", () => {
-    const ok = { sha: "a", what: "w", why: "y", impactScore: 3, resumeWorthy: true, bullet: "b", experienceIndex: 0 };
+    const ok = { sha: "a", what: "w", why: "y", impactScore: 3, resumeWorthy: true, bullet: "b", kind: "personal", experienceIndex: -1, projectIndex: 0 };
     expect(commitReviewSchema.safeParse(ok).success).toBe(true);
     expect(commitReviewSchema.safeParse({ ...ok, impactScore: 9 }).success).toBe(false);
+    expect(commitReviewSchema.safeParse({ ...ok, kind: "hobby" }).success).toBe(false);
   });
 });
