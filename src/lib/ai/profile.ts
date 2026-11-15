@@ -24,17 +24,38 @@ export const profileSchema = z.object({
     )
     .default([])
     .describe("Work history roles, most recent first"),
+  projects: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().describe("Project or repo link, or empty string"),
+        tech: z.array(z.string()).describe("Main languages/frameworks used"),
+        startDate: z.string().describe("e.g. 'Jan 2024', or empty string"),
+        endDate: z.string().describe("'Present' if ongoing, or empty string"),
+        highlights: z.array(z.string()).describe("1-4 concise accomplishments"),
+      }),
+    )
+    .default([])
+    .describe("Personal, side, open-source, or academic projects (not paid roles)"),
 });
 
 export type ResumeProfile = z.infer<typeof profileSchema>;
 export type ExperienceEntry = ResumeProfile["experience"][number];
+export type ProjectEntry = ResumeProfile["projects"][number];
+
+/** Fill in fields added after a profile was saved (e.g. `projects`). */
+export function normalizeProfile(raw: unknown): ResumeProfile {
+  const p = (raw ?? {}) as Partial<ResumeProfile>;
+  return { ...(p as ResumeProfile), experience: p.experience ?? [], projects: p.projects ?? [] };
+}
 
 export async function extractProfile(resumeText: string): Promise<ResumeProfile> {
   const { output } = await generateText({
     model: getModel(),
     instructions:
       "You are a technical recruiter. Read the resume and extract a structured candidate profile. " +
-      "Only use facts supported by the resume; infer seniority and target titles from experience.",
+      "Only use facts supported by the resume; infer seniority and target titles from experience. " +
+      "Put paid roles in experience and personal, side, open-source, or academic projects in projects.",
     prompt: `<resume>\n${resumeText.slice(0, 30_000)}\n</resume>`,
     output: Output.object({ schema: profileSchema }),
   });
